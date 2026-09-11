@@ -20,8 +20,6 @@ class UwtVisaInstrument:
     def open(self) -> None:
         self._inst = self._rm.open_resource(self.resource_name)
         self._inst.timeout = self.timeout
-        self._inst.read_termination = '\n'
-        self._inst.write_termination = '\n'
 
     def write(self, command: str) -> None:
         if not self._inst:
