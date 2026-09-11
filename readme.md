@@ -1,4 +1,26 @@
-# Development & TestStand Setup Guide
+# Development Guide
+
+## Optional: Development Containers (Docker + VSCode)
+This project includes an **optional Dev Container** configuration to make Python development reproducible and isolated, without requiring developers to install specific Python versions or dependencies on their host machine.
+
+> **Important:** Using the Dev Container is completely optional.  
+> You can continue to use a locally installed Python environment if you prefer.
+
+---
+
+### What is a Dev Container?
+
+A Dev Container is a Docker-based development environment that VS Code can attach to.  
+When enabled, VS Code runs your workspace **inside a container** that has:
+
+- A pinned Python version
+- All required dependencies
+- A consistent Linux environment
+
+This helps avoid issues like:
+- “Works on my machine”
+- Conflicting Python versions
+- Dependency drift between developers or customers
 
 ## DevContainer Setup When Using WSL2 & Instrument Communication
 
