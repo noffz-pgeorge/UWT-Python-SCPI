@@ -9,8 +9,14 @@ class UwtVisaInstrument:
             raise RuntimeError("No rf port set for instrument.")
         return f"TCPIP0::{self.ip_addr}::inst{self.rf_port}::INSTR"
 
-    def __init__(self, ip_addr: str, rf_port: int, timeout: int = 5000):
-        self._rm = pyvisa.ResourceManager('@py')
+    def __init__(
+        self, 
+        ip_addr: str,
+        rf_port: int,
+        timeout: int = 5000,
+        visa_backend: str = "@py"
+        ):
+        self._rm = pyvisa.ResourceManager(visa_backend) if visa_backend else pyvisa.ResourceManager()
         self.ip_addr = ip_addr
         self.rf_port = rf_port
         self.resource_name = self._create_vxi_11_str()
