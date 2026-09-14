@@ -3,6 +3,33 @@ from typing import List, Dict, Union, Tuple, Optional
 
 class WifiClient(UwtVisaInstrument):
 
+    #region Parent Class
+    def __init__(
+        self, 
+        ip_addr: str, 
+        rf_port: int, 
+        timeout: int = 5000, 
+        visa_backend: str = "@py"
+    ):
+        """Explicit constructor wrapper so TestStand recognizes parameters."""
+        super().__init__(ip_addr=ip_addr, rf_port=rf_port, timeout=timeout, visa_backend=visa_backend)
+
+    def open(self) -> None:
+        super().open()
+
+    def write(self, command: str) -> None:
+        super().write(command)
+
+    def read(self) -> str:
+        return super().read()
+
+    def query(self, command: str) -> str:
+        return super().query(command)
+
+    def disconnect(self) -> None:
+        super().disconnect()
+    #endregion
+ 
     def initiate(self, result_space: str) -> None:
         """Initiates the analyzer for a specific result space."""
         self.write(f":WLAN:INITiate {result_space}")
