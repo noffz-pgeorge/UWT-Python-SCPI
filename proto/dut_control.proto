@@ -1,0 +1,155 @@
+// gRPC API for controlling an ESP32-C3 running Espressif's RF non-signaling
+// test firmware. The service owns the DUT's serial port; clients (.NET,
+// Python, grpcurl, ...) drive TX/RX modes and read RX packet counts.
+//
+// Typical sequences:
+//   TX:  OpenSession -> StartWlanTx / StartBleTx -> (measure) -> Stop
+//   RX:  OpenSession -> StartWlanRx / StartBleRx -> (stimulate) -> FetchWlanRx / FetchBleRx
+//
+// Calls are serialized on the server: one DUT, one command at a time.
+syntax = "proto3";
+
+package noffz.dut.v1;
+
+import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Noffz.Dut.Grpc";
+
+service DutControl {
+  // Opens the serial port. Re-opening the same port is a no-op; a different
+  // port closes the current one first. Empty port uses the server default.
+  rpc OpenSession(OpenSessionRequest) returns (SessionStatus);
+  rpc CloseSession(google.protobuf.Empty) returns (SessionStatus);
+  rpc GetStatus(google.protobuf.Empty) returns (SessionStatus);
+
+  // Sends cmdstop. Ends any TX or RX in progress (RX counts are discarded;
+  // use the Fetch calls to stop RX and keep the result).
+  rpc Stop(google.protobuf.Empty) returns (CommandReply);
+
+  rpc StartBleTx(BleTxRequest) returns (CommandReply);
+  rpc StartWlanTx(WlanTxRequest) returns (CommandReply);
+
+  rpc StartBleRx(BleRxRequest) returns (CommandReply);
+  // Stops BLE RX and returns the packet counts. Requires state BLE_RX.
+  rpc FetchBleRx(google.protobuf.Empty) returns (BleRxResult);
+
+  rpc StartWlanRx(WlanRxRequest) returns (CommandReply);
+  // Stops Wi-Fi RX and returns the packet counts. Requires state WLAN_RX.
+  rpc FetchWlanRx(google.protobuf.Empty) returns (WlanRxResult);
+}
+
+// --------------------------------------------------------------------------
+// Enums. Numeric values are what the firmware expects on the command line.
+// --------------------------------------------------------------------------
+enum DutState {
+  DUT_STATE_CLOSED = 0;
+  DUT_STATE_IDLE = 1;
+  DUT_STATE_BLE_TX = 2;
+  DUT_STATE_WLAN_TX = 3;
+  DUT_STATE_BLE_RX = 4;
+  DUT_STATE_WLAN_RX = 5;
+}
+
+// Rate codes from ESP-IDF esp_phy_cert_test.h (esp_phy_wifi_rate_t).
+enum WlanDataRate {
+  WLAN_DATA_RATE_B_1M = 0;
+  WLAN_DATA_RATE_B_2M = 1;
+  WLAN_DATA_RATE_B_5M5 = 2;
+  WLAN_DATA_RATE_B_11M = 3;
+  WLAN_DATA_RATE_G_48M = 8;
+  WLAN_DATA_RATE_G_24M = 9;
+  WLAN_DATA_RATE_G_12M = 10;
+  WLAN_DATA_RATE_G_6M = 11;
+  WLAN_DATA_RATE_G_54M = 12;
+  WLAN_DATA_RATE_G_36M = 13;
+  WLAN_DATA_RATE_G_18M = 14;
+  WLAN_DATA_RATE_G_9M = 15;
+  WLAN_DATA_RATE_N_MCS0 = 16;
+  WLAN_DATA_RATE_N_MCS1 = 17;
+  WLAN_DATA_RATE_N_MCS2 = 18;
+  WLAN_DATA_RATE_N_MCS3 = 19;
+  WLAN_DATA_RATE_N_MCS4 = 20;
+  WLAN_DATA_RATE_N_MCS5 = 21;
+  WLAN_DATA_RATE_N_MCS6 = 22;
+  WLAN_DATA_RATE_N_MCS7 = 23;
+}
+
+enum WlanBandwidth {
+  WLAN_BANDWIDTH_HT20 = 0;
+  WLAN_BANDWIDTH_HT40 = 1;
+}
+
+enum BleRate {
+  BLE_RATE_LE_1M = 0;
+  BLE_RATE_LE_2M = 1;
+  BLE_RATE_LE_CODED_125K = 2;
+  BLE_RATE_LE_CODED_500K = 3;
+}
+
+enum BlePayloadPattern {
+  BLE_PAYLOAD_PATTERN_P1010 = 0;
+  BLE_PAYLOAD_PATTERN_P00001111 = 1;
+  BLE_PAYLOAD_PATTERN_PRBS9 = 2;
+}
+
+// --------------------------------------------------------------------------
+// Messages
+// --------------------------------------------------------------------------
+message OpenSessionRequest {
+  string port = 1;              // "COM5", "/dev/ttyUSB0"; empty = server default
+  int32 read_timeout_ms = 2;    // 0 = server default
+}
+
+message SessionStatus {
+  bool is_open = 1;
+  string port = 2;
+  DutState state = 3;
+}
+
+message CommandReply {
+  string response = 1;          // first line the firmware printed, if any
+  DutState state = 2;           // state after the command
+}
+
+message BleTxRequest {
+  int32 channel_index = 1;      // 0-36 data, 37-39 advertising (RF test tool index)
+  int32 power_level = 2;        // 0-15 (0 = -24 dBm ... 15 = +20 dBm nominal)
+  int32 payload_length = 3;     // bytes; 0 = 250
+  BlePayloadPattern payload_pattern = 4;
+  uint32 sync_word = 5;         // 0 = 0x71764129
+  BleRate rate = 6;
+  int32 transmission_mode = 7;  // passed through as the last fcc_le_tx_syncw arg
+}
+
+message WlanTxRequest {
+  int32 channel = 1;            // 1-14
+  WlanDataRate rate = 2;
+  int32 attenuation_quarter_db = 3;  // TX power reduction in 0.25 dB steps (0 = full power)
+  WlanBandwidth bandwidth = 4;
+}
+
+message BleRxRequest {
+  int32 channel_index = 1;
+  uint32 sync_word = 2;         // 0 = 0x71764129
+  BleRate rate = 3;
+}
+
+message WlanRxRequest {
+  int32 channel = 1;
+  WlanDataRate rate = 2;
+  WlanBandwidth bandwidth = 3;
+}
+
+message BleRxResult {
+  int32 total_packets = 1;      // Res[0]: everything received
+  int32 desired_packets = 2;    // Res[1]: received at the configured rate (use for PER)
+  double rssi_dbm = 3;          // Res[11] / Res[1]; NaN when nothing received
+  string raw = 4;               // firmware result line
+}
+
+message WlanRxResult {
+  int32 correct_packets = 1;    // all packets received
+  int32 desired_packets = 2;    // received at the configured rate (use for PER)
+  double rssi_dbm = 3;          // average RSSI of desired packets
+  string raw = 4;               // firmware result line
+}

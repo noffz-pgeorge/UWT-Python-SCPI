@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Noffz.Dut.Grpc.Client.Sample/Noffz.Dut.Grpc.Client.Sample.csproj" />
+  <Project Path="Noffz.Dut.Grpc.Client/Noffz.Dut.Grpc.Client.csproj" />
+  <Project Path="Noffz.Dut.Grpc.Service/Noffz.Dut.Grpc.Service.csproj" />
+  <Project Path="Noffz.Espressif.ESP32C3.DutControls/Noffz.Espressif.ESP32C3.DutControls.csproj" />
+</Solution>

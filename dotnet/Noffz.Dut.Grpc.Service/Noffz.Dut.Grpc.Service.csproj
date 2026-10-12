@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Noffz.Dut.Grpc.Service</RootNamespace>
+    <AssemblyName>Noffz.Dut.Grpc.Service</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\..\proto\dut_control.proto" GrpcServices="Server" Link="Protos\dut_control.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.66.0" />
+    <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.66.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
+  </ItemGroup>
+
+  <!-- Builds the control library from source. To use the compiled DLL
+       instead, replace the ProjectReference with:
+       <Reference Include="Noffz.Espressif.ESP32C3.DutControls">
+         <HintPath>path\to\Noffz.Espressif.ESP32C3.DutControls.dll</HintPath>
+       </Reference>
+       <PackageReference Include="System.IO.Ports" Version="8.0.0" />  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Noffz.Espressif.ESP32C3.DutControls\Noffz.Espressif.ESP32C3.DutControls.csproj" />
+  </ItemGroup>
+
+</Project>
