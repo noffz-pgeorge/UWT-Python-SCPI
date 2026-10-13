@@ -48,13 +48,21 @@ WIFI_TX_CASES: List[Dict] = [
     dict(name="Wi-Fi ch11 54M", channel=11, rate="G_54M"),
 ]
 
-BLE_COMMON = dict(power_level=15, ref_level=-28.0, trigger_threshold=-45.0)
+# Bluetooth RF test payloads: 10101010 (P_1010) for power, frequency offset,
+# drift and df2; 11110000 (P_00001111 on the DUT, sent LSB first) for df1.
+# The analyzer's payload pattern is set to match the DUT payload automatically.
+BLE_COMMON = dict(power_level=15, ref_level=-28.0, trigger_threshold=-45.0,
+                  payload="P_1010")
 
 BLE_TX_CASES: List[Dict] = [
     # channel = BLE RF channel 0-39, f = 2402 + 2*ch MHz
     dict(name="BLE 2402 1M", channel=0,  rate="LE_1M"),
     dict(name="BLE 2444 1M", channel=21, rate="LE_1M"),
     dict(name="BLE 2480 2M", channel=39, rate="LE_2M"),
+    dict(name="BLE 2444 1M df1", channel=21, rate="LE_1M", payload="P_00001111"),
+    # Diagnostics for the 2480 2M result: rate vs. channel
+    dict(name="BLE 2444 2M", channel=21, rate="LE_2M"),
+    dict(name="BLE 2480 1M", channel=39, rate="LE_1M"),
 ]
 
 # RX sweeps need RFSG waveforms; fill these in and set the RUN flags to enable.
@@ -129,9 +137,9 @@ def _num(text, scale=1.0, fmt="{:.2f}"):
 
 
 def print_table(results: List[Dict]) -> None:
-    print("\n" + "=" * 106)
+    print("\n" + "=" * 124)
     print(f"{'Case':<18} {'Freq MHz':>8}  Result")
-    print("-" * 106)
+    print("-" * 124)
     for r in results:
         freq = _num(r.get("freq_hz"), 1e-6, "{:.0f}") if "freq_hz" in r else ""
         if "error" in r:
@@ -143,13 +151,24 @@ def print_table(results: List[Dict]) -> None:
                     f"ferr {_num(s.get('freq_error_hz'), 1e-3)} kHz  "
                     f"rate idx {s.get('detected_rate_index')}  CRC {s.get('psdu_crc')}")
         elif r["test"] == "ble_tx":
-            txp = str(r["summary"].get("txp", "")).split(",")
-            line = f"txp[0] {_num(txp[0])} dBm  modacc {str(r['summary'].get('modacc'))[:44]}"
+            s = r["summary"]
+            # Initial frequency offset when the analyzer reports it, else the
+            # peak frequency error (marked "pk").
+            foff, label = s.get("freq_offset_hz"), "foff"
+            if str(foff).strip().upper() in ("NAN", "NONE", ""):
+                foff, label = s.get("peak_freq_error_hz"), "ferr pk"
+            line = (f"pwr {_num(s.get('avg_power_dbm'))} dBm  "
+                    f"{label} {_num(foff, 1e-3)} kHz  "
+                    f"drift {_num(s.get('peak_drift_hz'), 1e-3)} kHz  "
+                    f"df1 {_num(s.get('df1avg_hz'), 1e-3, '{:.0f}')}  "
+                    f"df2 {_num(s.get('df2avg_hz'), 1e-3, '{:.0f}')} kHz  "
+                    f"df2max {_num(s.get('df2max_above_threshold_pct'), 1, '{:.1f}')}%  "
+                    f"[{r.get('payload')}]")
         else:
             s = r.get("sensitivity_dbm")
             line = f"sensitivity {'not reached' if s is None else f'{s:.1f} dBm'}  ({len(r['points'])} steps)"
-        print(f"{r['case']:<18} {freq:>8}  {line[:76]}")
-    print("=" * 106)
+        print(f"{r['case']:<18} {freq:>8}  {line}")
+    print("=" * 124)
 
 
 def save(results: List[Dict]) -> Path:

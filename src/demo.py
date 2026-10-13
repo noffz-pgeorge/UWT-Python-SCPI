@@ -40,6 +40,47 @@ log = logging.getLogger("demo")
 
 BUSY_STATES = {"PROCESSING", "PENDING", "ACTIVE"}
 
+# Field order of :FETch:BT:RESults<i>:TXP? and :MODacc? (UWT manual 3.7.0)
+BT_TXP_FIELDS = [
+    "avg_power_mean_dbm", "avg_power_max_dbm", "avg_power_min_dbm",
+    "peak_power_max_dbm", "papr_max_db",
+    "edr_gfsk_avg_power_mean_dbm", "edr_dpsk_avg_power_mean_dbm",
+    "edr_dpsk_gfsk_ratio_mean_db",
+]
+BT_MODACC_FIELDS = [
+    "br_initial_freq_error_max_hz", "br_peak_freq_drift_max_hz",
+    "br_peak_freq_drift_rate_max_hz", "edr_devm_99pct_pct",
+    "df1avg_max_hz", "df1avg_mean_hz", "df1avg_min_hz",
+    "df2avg_max_hz", "df2avg_mean_hz", "df2avg_min_hz",
+    "edr_header_freq_error_wi_max_hz", "edr_peak_freq_error_wi_w0_max_hz",
+    "edr_peak_freq_error_w0_max_hz", "iq_origin_offset_mean_db",
+    "le_initial_freq_error_hz", "le_initial_freq_drift_max_hz",
+    "le_peak_freq_drift_max_hz", "le_peak_freq_drift_rate_max_hz",
+    "le_peak_freq_error_max_hz",
+    "min_df1max_min_hz", "min_df2max_min_hz", "peak_devm_max_pct",
+    "peak_df2max_max_hz", "peak_rms_devm_max_pct",
+    "pct_symbols_above_df2max_threshold", "pct_symbols_below_99pct_devm_limit",
+    "rms_devm_mean_pct",
+]
+
+
+def parse_fields(text: str, names: List[str]) -> Dict[str, str]:
+    """Split a comma-separated result string into named fields. If the count
+    doesn't match (different service version), keep the raw string."""
+    values = [v.strip() for v in text.split(",")]
+    if len(values) != len(names):
+        return {"raw": text}
+    return dict(zip(names, values))
+
+
+# Analyzer payload pattern matching each DUT payload. The pattern decides which
+# ModAcc results are computed: df1 on 11110000, df2/offset/drift on 10101010.
+BLE_ANALYZER_PATTERN = {
+    BlePayload.P_1010: "Pattern10101010",
+    BlePayload.P_00001111: "Pattern11110000",   # 0x0F sent LSB first = 11110000 on air
+    BlePayload.PRBS9: "StandardDefined",
+}
+
 # :CONFigure:BT:DRATE values (bits/s) for LE packets
 BLE_DRATE = {BleRate.LE_1M: 1000000, BleRate.LE_2M: 2000000}
 
@@ -181,7 +222,7 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
         drate=drate,
         access_address=a.bt_access_address,
         payload_mode=a.bt_payload_mode,
-        payload_pattern=a.bt_payload_pattern,
+        payload_pattern=a.bt_payload_pattern or BLE_ANALYZER_PATTERN[BlePayload[a.payload]],
         packet_type=a.bt_packet_type,
         payload_length=a.payload_length)))
     if a.trigger_source:
@@ -205,21 +246,34 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
         bt.initiate(a.result_space)
         wait_measurement(bt, a.meas_timeout_s)
         result = {
-            "txp": bt.fetch_tx_power(a.result_index),
-            "modacc": bt.fetch_modacc(a.result_index),
+            "txp": parse_fields(bt.fetch_tx_power(a.result_index), BT_TXP_FIELDS),
+            "modacc": parse_fields(bt.fetch_modacc(a.result_index), BT_MODACC_FIELDS),
         }
         if not is_le:
             result["20db_bw"] = bt.fetch_20db_bandwidth(a.result_index)
     finally:
         dut.stop()
 
+    t, m = result["txp"], result["modacc"]
+    summary = {
+        "avg_power_dbm": t.get("avg_power_mean_dbm"),
+        "peak_power_dbm": t.get("peak_power_max_dbm"),
+        # Offset/drift and df2 are defined on a 10101010 payload, df1 on 11110000.
+        "freq_offset_hz": m.get("le_initial_freq_error_hz"),
+        "peak_freq_error_hz": m.get("le_peak_freq_error_max_hz"),
+        "peak_drift_hz": m.get("le_peak_freq_drift_max_hz"),
+        "df1avg_hz": m.get("df1avg_mean_hz"),
+        "df2avg_hz": m.get("df2avg_mean_hz"),
+        "df2max_above_threshold_pct": m.get("pct_symbols_above_df2max_threshold"),
+    }
+    if "raw" in t or "raw" in m:
+        summary["raw_txp"], summary["raw_modacc"] = t.get("raw"), m.get("raw")
+    if "20db_bw" in result:
+        summary["20db_bw_hz"] = result["20db_bw"].get("bandwidth")
     return {"test": "ble_tx", "channel": a.channel, "payload": a.payload,
             "freq_hz": freq, "rate": rate.name,
             "power_level": a.power_level,
-            "summary": {"txp": result["txp"], "modacc": result["modacc"],
-                        **({"20db_bw_hz": result["20db_bw"].get("bandwidth")}
-                           if "20db_bw" in result else {})},
-            "detail": result}
+            "summary": summary, "detail": result}
 
 
 # --------------------------------------------------------------------------- #
@@ -401,7 +455,8 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--bt-payload-mode", default=None,
                    help="value for :CONFigure:BT:PAYLoad:MODE")
     b.add_argument("--bt-payload-pattern", default=None,
-                   help="value for :CONFigure:BT:PAYLoad:PATTern")
+                   help="value for :CONFigure:BT:PAYLoad:PATTern; defaults to the "
+                        "pattern matching --payload")
     b.add_argument("--bt-drate", default=None,
                    help="value for :CONFigure:BT:DRATE; defaults from --rate for LE")
     b.add_argument("--bt-packet-type", default="PacketTypeLE",
