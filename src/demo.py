@@ -40,6 +40,9 @@ log = logging.getLogger("demo")
 
 BUSY_STATES = {"PROCESSING", "PENDING", "ACTIVE"}
 
+# :CONFigure:BT:DRATE values (bits/s) for LE packets
+BLE_DRATE = {BleRate.LE_1M: 1000000, BleRate.LE_2M: 2000000}
+
 
 # --------------------------------------------------------------------------- #
 # Helpers
@@ -166,14 +169,16 @@ def wifi_tx(dut: DutClient, wlan: WifiClient, a) -> Dict:
 
 def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
     rate = BleRate[a.rate]
-    freq = ble_channel_freq_hz(a.channel_index)
-    log.info("BLE TX: idx%d (%.0f MHz), %s, level %d (~%d dBm)",
-             a.channel_index, freq / 1e6, rate.name, a.power_level,
+    freq = ble_channel_freq_hz(a.channel)
+    log.info("BLE TX: ch%d (%.0f MHz), %s, level %d (~%d dBm)",
+             a.channel, freq / 1e6, rate.name, a.power_level,
              BLE_POWER_LEVEL_DBM[a.power_level])
 
+    is_le = a.bt_packet_type == "PacketTypeLE"
+    drate = a.bt_drate or (BLE_DRATE.get(rate) if is_le else None)
     bt.config_signal_and_packet(**_drop_none(dict(
         center_frequency=freq,
-        drate=a.bt_drate,
+        drate=drate,
         access_address=a.bt_access_address,
         packet_type=a.bt_packet_type,
         payload_length=a.payload_length)))
@@ -186,9 +191,11 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
             mq_time=a.trigger_quiet_s)))
     bt.config_power(ref_level=a.ref_level, txp_enable=True)
     bt.config_modacc(enable=True)
-    bt.config_20db_bandwidth(enable=True)
+    # 20 dB bandwidth is a BR/EDR measurement; enabling it for LE packets
+    # makes the whole measurement return NaN.
+    bt.config_20db_bandwidth(enable=not is_le)
 
-    dut.ble_tx(a.channel_index, a.power_level, length=a.payload_length,
+    dut.ble_tx(a.channel, a.power_level, length=a.payload_length,
                rate=rate)
     try:
         time.sleep(a.settle_s)
@@ -197,16 +204,18 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
         result = {
             "txp": bt.fetch_tx_power(a.result_index),
             "modacc": bt.fetch_modacc(a.result_index),
-            "20db_bw": bt.fetch_20db_bandwidth(a.result_index),
         }
+        if not is_le:
+            result["20db_bw"] = bt.fetch_20db_bandwidth(a.result_index)
     finally:
         dut.stop()
 
-    return {"test": "ble_tx", "channel_index": a.channel_index,
+    return {"test": "ble_tx", "channel": a.channel,
             "freq_hz": freq, "rate": rate.name,
             "power_level": a.power_level,
-            "summary": {"txp": result["txp"],
-                        "20db_bw_hz": result["20db_bw"].get("bandwidth")},
+            "summary": {"txp": result["txp"], "modacc": result["modacc"],
+                        **({"20db_bw_hz": result["20db_bw"].get("bandwidth")}
+                           if "20db_bw" in result else {})},
             "detail": result}
 
 
@@ -252,9 +261,9 @@ def _power_steps(start: float, stop: float, step: float) -> List[float]:
 
 def rx_sweep(dut: DutClient, rfsg: RfsgClient, a, *, is_ble: bool) -> Dict:
     if is_ble:
-        freq = ble_channel_freq_hz(a.channel_index)
+        freq = ble_channel_freq_hz(a.channel)
         rate = BleRate[a.rate]
-        start_rx = lambda: dut.ble_rx_start(a.channel_index, rate)
+        start_rx = lambda: dut.ble_rx_start(a.channel, rate)
         stop_rx = dut.ble_rx_stop
         name = "ble_rx"
     else:
@@ -376,7 +385,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_tx_common(w)
 
     b = sub.add_parser("ble-tx")
-    b.add_argument("--channel-index", type=int, default=19)
+    b.add_argument("--channel", type=int, default=21,
+                   help="BLE RF channel 0-39 (f = 2402 + 2*ch MHz)")
     b.add_argument("--rate", default="LE_1M", choices=BleRate.__members__)
     b.add_argument("--power-level", type=int, default=15, choices=range(16))
     b.add_argument("--payload-length", type=int, default=250)
@@ -384,8 +394,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="value for :CONFigure:BT:ACCess:ADDRess; the DUT uses "
                         "0x71764129 (check the manual for the expected format)")
     b.add_argument("--bt-drate", default=None,
-                   help="value for :CONFigure:BT:DRATE, e.g. the LE 1M enum")
-    b.add_argument("--bt-packet-type", default=None)
+                   help="value for :CONFigure:BT:DRATE; defaults from --rate for LE")
+    b.add_argument("--bt-packet-type", default="PacketTypeLE",
+                   help="value for :CONFigure:BT:PACKet:TYPE")
     _add_tx_common(b)
 
     wr = sub.add_parser("wifi-rx")
@@ -394,7 +405,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_rx_common(wr, "Wifi_6M", 0.10)
 
     br = sub.add_parser("ble-rx")
-    br.add_argument("--channel-index", type=int, default=19)
+    br.add_argument("--channel", type=int, default=21,
+                   help="BLE RF channel 0-39 (f = 2402 + 2*ch MHz)")
     br.add_argument("--rate", default="LE_1M", choices=BleRate.__members__)
     _add_rx_common(br, "BLE_1M", 0.308)
 

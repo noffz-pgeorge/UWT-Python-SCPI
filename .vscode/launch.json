@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Demo sweep",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/demo_sweep.py",
+      "cwd": "${workspaceFolder}",
+      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Demo CLI: wifi-tx ch6",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/demo.py",
+      "cwd": "${workspaceFolder}",
+      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "console": "integratedTerminal",
+      "args": [
+        "--ip", "192.168.141.60",
+        "--dut-service", "192.168.141.60:50051",
+        "--dut-port", "COM8",
+        "--tx-port", "1",
+        "-v",
+        "wifi-tx", "--channel", "6", "--rate", "G_6M",
+        "--wlan-standard", "A_G", "--wlan-bw", "BW20"
+      ]
+    },
+    {
+      "name": "Demo CLI: ble-tx ch21",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/demo.py",
+      "cwd": "${workspaceFolder}",
+      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "console": "integratedTerminal",
+      "args": [
+        "--ip", "192.168.141.60",
+        "--dut-service", "192.168.141.60:50051",
+        "--dut-port", "COM8",
+        "--tx-port", "1",
+        "-v",
+        "ble-tx", "--channel", "21", "--power-level", "15"
+      ]
+    }
+  ]
+}

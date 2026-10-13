@@ -96,21 +96,16 @@ def wifi_channel_freq_hz(channel: int) -> float:
     raise ValueError(f"Unsupported 2.4 GHz channel {channel}")
 
 
-def ble_channel_freq_hz(channel_index: int) -> float:
-    """BLE channel index (0-36 data, 37-39 advertising) -> center freq in Hz."""
-    if channel_index == 37:
-        phy = 0
-    elif channel_index == 38:
-        phy = 12
-    elif channel_index == 39:
-        phy = 39
-    elif 0 <= channel_index <= 10:
-        phy = channel_index + 1
-    elif 11 <= channel_index <= 36:
-        phy = channel_index + 2
-    else:
-        raise ValueError(f"Invalid BLE channel index {channel_index}")
-    return (2402 + 2 * phy) * 1e6
+def ble_channel_freq_hz(channel: int) -> float:
+    """BLE RF channel (0-39) -> center frequency in Hz: 2402 + 2*channel MHz.
+
+    This is the channel number the RF test firmware's fcc_le_tx / rw_le_rx_per
+    take (RF channel, not the link-layer channel index: advertising channel
+    37 is RF channel 0 = 2402 MHz).
+    """
+    if not 0 <= channel <= 39:
+        raise ValueError(f"Invalid BLE RF channel {channel} (0-39)")
+    return (2402 + 2 * channel) * 1e6
 
 
 # --------------------------------------------------------------------------- #
@@ -262,21 +257,21 @@ class DutClient:
         return WifiRxResult(r.correct_packets, r.desired_packets, r.rssi_dbm, r.raw)
 
     # -- BLE --------------------------------------------------------------- #
-    def ble_tx(self, channel_index: int, power_level: int = 15,
+    def ble_tx(self, channel: int, power_level: int = 15,
                length: int = 250, payload: BlePayload = BlePayload.PRBS9,
                rate: BleRate = BleRate.LE_1M, syncw: int = DEFAULT_SYNCW,
                transmission_mode: int = 0) -> str:
         """Start BLE TX; runs until stop() or another start."""
         return self._call("StartBleTx", pb.BleTxRequest(
-            channel_index=channel_index, power_level=power_level,
+            channel_index=channel, power_level=power_level,
             payload_length=length, payload_pattern=int(payload),
             sync_word=syncw, rate=int(rate), transmission_mode=transmission_mode,
         )).response
 
-    def ble_rx_start(self, channel_index: int, rate: BleRate = BleRate.LE_1M,
+    def ble_rx_start(self, channel: int, rate: BleRate = BleRate.LE_1M,
                      syncw: int = DEFAULT_SYNCW) -> str:
         return self._call("StartBleRx", pb.BleRxRequest(
-            channel_index=channel_index, sync_word=syncw, rate=int(rate))).response
+            channel_index=channel, sync_word=syncw, rate=int(rate))).response
 
     def ble_rx_stop(self) -> BleRxResult:
         r = self._call("FetchBleRx")

@@ -112,7 +112,7 @@ message CommandReply {
 }
 
 message BleTxRequest {
-  int32 channel_index = 1;      // 0-36 data, 37-39 advertising (RF test tool index)
+  int32 channel_index = 1;      // BLE RF channel 0-39, f = 2402 + 2*ch MHz (as fcc_le_tx takes it)
   int32 power_level = 2;        // 0-15 (0 = -24 dBm ... 15 = +20 dBm nominal)
   int32 payload_length = 3;     // bytes; 0 = 250
   BlePayloadPattern payload_pattern = 4;
@@ -130,7 +130,7 @@ message WlanTxRequest {
 }
 
 message BleRxRequest {
-  int32 channel_index = 1;
+  int32 channel_index = 1;      // BLE RF channel 0-39, as for BleTxRequest
   uint32 sync_word = 2;         // 0 = 0x71764129
   BleRate rate = 3;
 }
