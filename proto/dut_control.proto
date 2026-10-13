@@ -116,9 +116,10 @@ message BleTxRequest {
   int32 power_level = 2;        // 0-15 (0 = -24 dBm ... 15 = +20 dBm nominal)
   int32 payload_length = 3;     // bytes; 0 = 250
   BlePayloadPattern payload_pattern = 4;
-  uint32 sync_word = 5;         // 0 = 0x71764129
+  uint32 sync_word = 5;         // 0 = 0x71764129, the firmware default. Other values need
+                                // fcc_le_tx_syncw, which not every RF test bin supports.
   BleRate rate = 6;
-  int32 transmission_mode = 7;  // passed through as the last fcc_le_tx_syncw arg
+  int32 transmission_mode = 7;  // firmware tx_num: packets to send, 0 = until Stop
 }
 
 message WlanTxRequest {

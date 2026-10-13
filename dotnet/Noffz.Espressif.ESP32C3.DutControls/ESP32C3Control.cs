@@ -9,8 +9,12 @@ namespace Noffz.Espressif.ESP32C3.DutControls
     /// <summary>
     /// Controls an ESP32-C3 running Espressif's RF non-signaling test firmware.
     ///
-    /// Changes from the original version (public API is source-compatible;
-    /// command strings are unchanged):
+    /// Changes from the original version (public API is source-compatible):
+    ///  - BLE TX uses `fcc_le_tx` (no sync word argument). The RF test bin on
+    ///    the demo board doesn't implement `fcc_le_tx_syncw`; it is only sent
+    ///    when a non-default sync word is requested.
+    ///  - Replies of "cmd not exist!" raise DutCommandRejectedException instead
+    ///    of being treated as an acknowledgement.
     ///  - Read/write timeouts (ReadTimeoutMs). The original SerialPort used an
     ///    infinite ReadTimeout, so a missing response blocked forever.
     ///  - Commands that only print an acknowledgement tolerate no reply
@@ -28,6 +32,10 @@ namespace Noffz.Espressif.ESP32C3.DutControls
     public class ESP32C3Control
     {
         private SerialPort _dut;
+        private string _lastCommand = "";
+
+        /// <summary>Sync word the firmware uses when none is given.</summary>
+        public const uint DefaultSyncWord = 0x71764129;
 
         private static readonly Regex WlanRxRegex = new Regex(
             @"Correct:\s*(\d+)\s+Desired:\s*(\d+)\s+RSSI:\s*(-?\d+)",
@@ -69,7 +77,12 @@ namespace Noffz.Espressif.ESP32C3.DutControls
             TransmissionRate transmissionRate,
             int transmissionMode)
         {
-            Send($"fcc_le_tx_syncw {powerLevel} {channelNumber} {payloadLength} {(int)payloadBitPattern} {syncw} {(int)transmissionRate} {transmissionMode}");
+            // transmissionMode is the firmware's tx_num: packets to send, 0 = until AbortTx.
+            // fcc_le_tx always uses the default sync word (0x71764129).
+            string cmd = IsDefaultSyncWord(syncw)
+                ? $"fcc_le_tx {powerLevel} {channelNumber} {payloadLength} {(int)payloadBitPattern} {(int)transmissionRate} {transmissionMode}"
+                : $"fcc_le_tx_syncw {powerLevel} {channelNumber} {payloadLength} {(int)payloadBitPattern} {syncw} {(int)transmissionRate} {transmissionMode}";
+            Send(cmd);
             return ReadAck();
         }
 
@@ -118,8 +131,7 @@ namespace Noffz.Espressif.ESP32C3.DutControls
             sbyte attenuation,
             WlanBandwidth htMode)
         {
-            Send($"cbw40m_en {(int)htMode}");
-            ReadAck();
+            SetBandwidth(htMode);
 
             Send($"wifitxout {channel} 0x{(int)dataRate:x} {attenuation}");
             return ReadAck();
@@ -127,8 +139,7 @@ namespace Noffz.Espressif.ESP32C3.DutControls
 
         public string WlanRxListen(int channel, WlanDataRate dataRate, WlanBandwidth htMode)
         {
-            Send($"cbw40m_en {(int)htMode}");
-            ReadAck();
+            SetBandwidth(htMode);
 
             Send($"esp_rx {channel} 0x{(int)dataRate:x}");
             return ReadAck();
@@ -170,16 +181,52 @@ namespace Noffz.Espressif.ESP32C3.DutControls
             if (!IsOpen)
                 throw new InvalidOperationException("DUT session is not open. Call OpenSession first.");
             _dut.DiscardInBuffer();
+            _lastCommand = cmd;
             _dut.WriteLine(cmd + "\r");
         }
 
-        /// <summary>Reads one line if the firmware sends one; null on timeout.</summary>
+        /// <summary>
+        /// Reads one line if the firmware sends one; null on timeout. Throws
+        /// DutCommandRejectedException if the firmware doesn't know the command.
+        /// </summary>
         private string ReadAck()
         {
             string line = TryReadLine(AckTimeoutMs);
             if (!string.IsNullOrEmpty(line))
+            {
                 Log?.Invoke(line);
+                if (line.IndexOf("cmd not exist", StringComparison.OrdinalIgnoreCase) >= 0)
+                    throw new DutCommandRejectedException(_lastCommand, line);
+            }
             return line;
+        }
+
+        /// <summary>
+        /// cbw40m_en is optional: HT20 is the firmware default, so a build without
+        /// the command is fine for HT20. HT40 without it is an error.
+        /// </summary>
+        private void SetBandwidth(WlanBandwidth htMode)
+        {
+            Send($"cbw40m_en {(int)htMode}");
+            try
+            {
+                ReadAck();
+            }
+            catch (DutCommandRejectedException) when (htMode == WlanBandwidth.HT20)
+            {
+                Log?.Invoke("cbw40m_en not supported by firmware; using default HT20");
+            }
+        }
+
+        private static bool IsDefaultSyncWord(string syncw)
+        {
+            if (string.IsNullOrWhiteSpace(syncw))
+                return true;
+            string hex = syncw.Trim();
+            if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                hex = hex.Substring(2);
+            return uint.TryParse(hex, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out uint value)
+                && value == DefaultSyncWord;
         }
 
         /// <summary>Reads lines until one matches; throws TimeoutException otherwise.</summary>
@@ -312,5 +359,19 @@ namespace Noffz.Espressif.ESP32C3.DutControls
         public int Desired { get; }
         public double RssiDbm { get; }
         public string Raw { get; }
+    }
+
+    /// <summary>The firmware answered "cmd not exist!" to a command.</summary>
+    public sealed class DutCommandRejectedException : Exception
+    {
+        public DutCommandRejectedException(string command, string reply)
+            : base($"DUT firmware rejected '{command}': {reply}")
+        {
+            Command = command;
+            Reply = reply;
+        }
+
+        public string Command { get; }
+        public string Reply { get; }
     }
 }

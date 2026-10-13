@@ -174,6 +174,7 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
     bt.config_signal_and_packet(**_drop_none(dict(
         center_frequency=freq,
         drate=a.bt_drate,
+        access_address=a.bt_access_address,
         packet_type=a.bt_packet_type,
         payload_length=a.payload_length)))
     if a.trigger_source:
@@ -378,7 +379,10 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--channel-index", type=int, default=19)
     b.add_argument("--rate", default="LE_1M", choices=BleRate.__members__)
     b.add_argument("--power-level", type=int, default=15, choices=range(16))
-    b.add_argument("--payload-length", type=int, default=37)
+    b.add_argument("--payload-length", type=int, default=250)
+    b.add_argument("--bt-access-address", default=None,
+                   help="value for :CONFigure:BT:ACCess:ADDRess; the DUT uses "
+                        "0x71764129 (check the manual for the expected format)")
     b.add_argument("--bt-drate", default=None,
                    help="value for :CONFigure:BT:DRATE, e.g. the LE 1M enum")
     b.add_argument("--bt-packet-type", default=None)

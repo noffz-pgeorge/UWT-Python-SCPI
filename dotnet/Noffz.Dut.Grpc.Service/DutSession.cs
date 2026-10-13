@@ -149,6 +149,10 @@ public sealed class DutSession : IDisposable
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
         }
+        catch (DutCommandRejectedException ex)
+        {
+            throw new RpcException(new Status(StatusCode.Unimplemented, ex.Message));
+        }
         catch (FormatException ex)
         {
             throw new RpcException(new Status(StatusCode.Internal, "Unexpected DUT response: " + ex.Message));
