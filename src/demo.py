@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Optional
 
 from bt_client import BTClient
-from dut_grpc import (BLE_POWER_LEVEL_DBM, BleRate, DutClient, WifiRate,
+from dut_grpc import (BLE_POWER_LEVEL_DBM, BlePayload, BleRate, DutClient, WifiRate,
                       ble_channel_freq_hz, wifi_channel_freq_hz)
 from rfsg_client import RfsgClient
 from wifi_client import WifiClient
@@ -180,6 +180,8 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
         center_frequency=freq,
         drate=drate,
         access_address=a.bt_access_address,
+        payload_mode=a.bt_payload_mode,
+        payload_pattern=a.bt_payload_pattern,
         packet_type=a.bt_packet_type,
         payload_length=a.payload_length)))
     if a.trigger_source:
@@ -196,6 +198,7 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
     bt.config_20db_bandwidth(enable=not is_le)
 
     dut.ble_tx(a.channel, a.power_level, length=a.payload_length,
+               payload=BlePayload[a.payload],
                rate=rate)
     try:
         time.sleep(a.settle_s)
@@ -210,7 +213,7 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
     finally:
         dut.stop()
 
-    return {"test": "ble_tx", "channel": a.channel,
+    return {"test": "ble_tx", "channel": a.channel, "payload": a.payload,
             "freq_hz": freq, "rate": rate.name,
             "power_level": a.power_level,
             "summary": {"txp": result["txp"], "modacc": result["modacc"],
@@ -393,6 +396,12 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--bt-access-address", default=None,
                    help="value for :CONFigure:BT:ACCess:ADDRess; the DUT uses "
                         "0x71764129 (check the manual for the expected format)")
+    b.add_argument("--payload", default="PRBS9", choices=BlePayload.__members__,
+                   help="DUT payload pattern (fcc_le_tx data_type)")
+    b.add_argument("--bt-payload-mode", default=None,
+                   help="value for :CONFigure:BT:PAYLoad:MODE")
+    b.add_argument("--bt-payload-pattern", default=None,
+                   help="value for :CONFigure:BT:PAYLoad:PATTern")
     b.add_argument("--bt-drate", default=None,
                    help="value for :CONFigure:BT:DRATE; defaults from --rate for LE")
     b.add_argument("--bt-packet-type", default="PacketTypeLE",
