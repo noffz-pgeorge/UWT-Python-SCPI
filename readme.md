@@ -227,9 +227,10 @@ python src/demo.py <test> --help        # all options for a test
 | Test | What happens |
 |---|---|
 | `wifi-tx` | DUT transmits Wi-Fi; the analyzer measures TXP, ModAcc (OFDM or DSSS by rate) and optionally SEM (`--sem`) |
-| `ble-tx` | DUT transmits BLE; the analyzer measures TXP, ModAcc and 20 dB bandwidth |
+| `ble-tx` | DUT transmits BLE; the analyzer measures TXP and ModAcc (plus 20 dB bandwidth for Classic packet types) |
 | `wifi-rx` | RFSG power sweep; the DUT counts Wi-Fi packets; PER, RSSI and sensitivity |
 | `ble-rx` | Same for BLE |
+| `wifi-external` | Analyzer is set up (default 802.11ax, 80 MHz, 5.21 GHz), then waits for you to start a waveform on an external generator such as the RFmx SFP and press Enter; no DUT |
 
 Results are printed and saved as JSON in `results/`.
 
@@ -240,12 +241,25 @@ Results are printed and saved as JSON in `results/`.
 python src/demo.py --ip 192.168.141.60 --dut-service 192.168.141.60:50051 --dut-port COM8 --tx-port 1 -v \
     wifi-tx --channel 6 --rate G_6M --wlan-standard A_G --wlan-bw BW20
 
-# BLE TX, channel index 19
-python src/demo.py ... ble-tx --channel-index 19
+# BLE TX, RF channel 21 (2402 + 2*21 = 2444 MHz)
+python src/demo.py ... ble-tx --channel 21
 
 # Wi-Fi RX sweep: start coarse to confirm the DUT counts packets, then go finer
 python src/demo.py ... wifi-rx --waveform <name> --packets-per-waveform <n> --start -50 --stop -90 --step -5
 ```
+
+### External source (802.11ax)
+
+```bash
+python src/demo.py --ip 192.168.141.60 --tx-port 1 -v wifi-external \
+    --frequency-hz 5.21e9 --wlan-standard AX --wlan-bw BW80 --ref-level -10 --sem
+```
+
+The demo configures the analyzer, then prompts. Start the waveform in the generator
+(same center frequency), press Enter to measure, or type `s` to skip. In
+`demo_sweep.py` these cases are in `WIFI_EXTERNAL_CASES` and run after the DUT cases.
+`--dut-service` isn't needed for this test. The waveform needs idle time between
+packets for the RF0 trigger; for a continuous waveform pass `--trigger-source ""`.
 
 ### Measurement settings that matter
 
@@ -261,6 +275,11 @@ python src/demo.py ... wifi-rx --waveform <name> --packets-per-waveform <n> --st
 - **Standard and bandwidth:** pass `--wlan-standard A_G --wlan-bw BW20` for legacy OFDM
   rates. Values are listed under `:CONFigure:WLAN:STANdard` and
   `:CONFigure:WLAN:CHANnel:BANDwidth` in the SCPI reference.
+- **BLE channel numbering:** `--channel` is the BLE RF channel (0–39), f = 2402 + 2×ch MHz,
+  which is what the firmware's `fcc_le_tx` takes. It is not the link-layer channel index
+  (advertising channel 37 is RF channel 0, 2402 MHz).
+- **BLE analyzer setup:** the demo sets `PacketTypeLE` and the data rate from `--rate`, and
+  turns 20 dB bandwidth off for LE (it is a BR/EDR measurement and makes LE results NaN).
 - **`psdu_crc: FAIL` on Wi-Fi TX is expected** with the RF test firmware. Its test payloads
   don't appear to carry a valid 802.11 FCS. Use the detected rate, symbol count, EVM and
   frequency error to judge the decode.

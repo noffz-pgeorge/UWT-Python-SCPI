@@ -65,6 +65,16 @@ BLE_TX_CASES: List[Dict] = [
     dict(name="BLE 2480 1M", channel=39, rate="LE_1M"),
 ]
 
+# External source: the analyzer is configured, the sweep pauses for you to start
+# the waveform on the generator (e.g. RFmx SFP), and measures when you press
+# Enter ('s' + Enter skips). No DUT. frequency_hz must match the generator.
+RUN_WIFI_EXTERNAL = False
+
+WIFI_EXTERNAL_CASES: List[Dict] = [
+    dict(name="Wi-Fi 6 80M ext", frequency_hz=5.21e9, wlan_standard="AX",
+         wlan_bw="BW80", ref_level=-10.0, sem=True),
+]
+
 # RX sweeps need RFSG waveforms; fill these in and set the RUN flags to enable.
 RUN_WIFI_RX = False
 RUN_BLE_RX = False
@@ -144,12 +154,22 @@ def print_table(results: List[Dict]) -> None:
         freq = _num(r.get("freq_hz"), 1e-6, "{:.0f}") if "freq_hz" in r else ""
         if "error" in r:
             line = "ERROR " + r["error"]
+        elif r.get("skipped"):
+            line = "SKIPPED"
         elif r["test"] == "wifi_tx":
             s = r["summary"]
             line = (f"pwr {_num(s.get('burst_power_dbm'))} dBm  "
                     f"EVM {_num(s.get('rms_evm'))} dB  "
                     f"ferr {_num(s.get('freq_error_hz'), 1e-3)} kHz  "
                     f"rate idx {s.get('detected_rate_index')}  CRC {s.get('psdu_crc')}")
+        elif r["test"] == "wifi_external":
+            s = r["summary"]
+            line = (f"{r.get('standard')} {r.get('bandwidth')}  "
+                    f"pwr {_num(s.get('burst_power_dbm'))} dBm  "
+                    f"EVM {_num(s.get('rms_evm'))} dB  "
+                    f"ferr {_num(s.get('freq_error_hz'), 1e-3)} kHz  "
+                    f"MCS {s.get('detected_mcs')}  CRC {s.get('psdu_crc')}"
+                    + (f"  SEM {s.get('sem_status')}" if "sem_status" in s else ""))
         elif r["test"] == "ble_tx":
             s = r["summary"]
             # Initial frequency offset when the analyzer reports it, else the
@@ -181,6 +201,33 @@ def save(results: List[Dict]) -> Path:
 # --------------------------------------------------------------------------- #
 # Sweep
 # --------------------------------------------------------------------------- #
+def run_dut_cases(dut, kw, wifi_tx_cases, ble_tx_cases, wifi_rx_cases,
+                  ble_rx_cases) -> List[Dict]:
+    results: List[Dict] = []
+
+    if wifi_tx_cases:
+        with demo.session(WifiClient(rf_port=TX_PORT, **kw)) as wlan:
+            for name, a in wifi_tx_cases:
+                results.append(run_case("wifi-tx", name, a,
+                                        lambda a: demo.wifi_tx(dut, wlan, a)))
+
+    if ble_tx_cases:
+        with demo.session(BTClient(rf_port=TX_PORT, **kw)) as bt:
+            for name, a in ble_tx_cases:
+                results.append(run_case("ble-tx", name, a,
+                                        lambda a: demo.ble_tx(dut, bt, a)))
+
+    if wifi_rx_cases or ble_rx_cases:
+        with demo.session(RfsgClient(rf_port=RX_PORT, **kw)) as rfsg:
+            for name, a in wifi_rx_cases:
+                results.append(run_case("wifi-rx", name, a,
+                                        lambda a: demo.rx_sweep(dut, rfsg, a, is_ble=False)))
+            for name, a in ble_rx_cases:
+                results.append(run_case("ble-rx", name, a,
+                                        lambda a: demo.rx_sweep(dut, rfsg, a, is_ble=True)))
+    return results
+
+
 def main() -> None:
     logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(levelname)-5s %(message)s",
                         datefmt="%H:%M:%S")
@@ -192,30 +239,21 @@ def main() -> None:
     ble_tx_cases = build("ble-tx", BLE_TX_CASES, BLE_COMMON)
     wifi_rx_cases = build("wifi-rx", WIFI_RX_CASES, {}) if RUN_WIFI_RX else []
     ble_rx_cases = build("ble-rx", BLE_RX_CASES, {}) if RUN_BLE_RX else []
+    external_cases = (build("wifi-external", WIFI_EXTERNAL_CASES, {})
+                      if RUN_WIFI_EXTERNAL else [])
 
-    with DutClient(DUT_SERVICE, com_port=DUT_PORT) as dut:
-        log.info("DUT: %s", dut.status())
+    if wifi_tx_cases or ble_tx_cases or wifi_rx_cases or ble_rx_cases:
+        with DutClient(DUT_SERVICE, com_port=DUT_PORT) as dut:
+            log.info("DUT: %s", dut.status())
+            results += run_dut_cases(dut, kw, wifi_tx_cases, ble_tx_cases,
+                                     wifi_rx_cases, ble_rx_cases)
 
-        if wifi_tx_cases:
-            with demo.session(WifiClient(rf_port=TX_PORT, **kw)) as wlan:
-                for name, a in wifi_tx_cases:
-                    results.append(run_case("wifi-tx", name, a,
-                                            lambda a: demo.wifi_tx(dut, wlan, a)))
-
-        if ble_tx_cases:
-            with demo.session(BTClient(rf_port=TX_PORT, **kw)) as bt:
-                for name, a in ble_tx_cases:
-                    results.append(run_case("ble-tx", name, a,
-                                            lambda a: demo.ble_tx(dut, bt, a)))
-
-        if wifi_rx_cases or ble_rx_cases:
-            with demo.session(RfsgClient(rf_port=RX_PORT, **kw)) as rfsg:
-                for name, a in wifi_rx_cases:
-                    results.append(run_case("wifi-rx", name, a,
-                                            lambda a: demo.rx_sweep(dut, rfsg, a, is_ble=False)))
-                for name, a in ble_rx_cases:
-                    results.append(run_case("ble-rx", name, a,
-                                            lambda a: demo.rx_sweep(dut, rfsg, a, is_ble=True)))
+    # External-source cases don't use the DUT.
+    if external_cases:
+        with demo.session(WifiClient(rf_port=TX_PORT, **kw)) as wlan:
+            for name, a in external_cases:
+                results.append(run_case("wifi-external", name, a,
+                                        lambda a: demo.wifi_external(wlan, a)))
 
     print_table(results)
     print(f"Saved {save(results)}")

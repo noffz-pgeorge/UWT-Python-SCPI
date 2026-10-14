@@ -4,9 +4,12 @@ from a Linux machine.
 
 Four flows:
     wifi-tx     DUT transmits Wi-Fi  -> analyzer measures TXP + ModAcc (+ SEM)
-    ble-tx      DUT transmits BLE    -> analyzer measures TXP + ModAcc + 20 dB BW
+    ble-tx      DUT transmits BLE    -> analyzer measures TXP + ModAcc
+                                        (+ 20 dB BW for Classic packet types)
     wifi-rx     RFSG plays Wi-Fi packets at a power sweep -> DUT counts -> PER
     ble-rx      RFSG plays BLE packets at a power sweep   -> DUT counts -> PER
+    wifi-external  analyzer is configured, you start an external generator
+                (e.g. the RFmx SFP) and press Enter, then it measures. No DUT.
 
 Examples:
     python demo.py --ip 10.0.0.5 --dut-service 10.0.0.5:50051 wifi-tx --channel 6
@@ -28,7 +31,7 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional
 
 from bt_client import BTClient
 from dut_grpc import (BLE_POWER_LEVEL_DBM, BlePayload, BleRate, DutClient, WifiRate,
@@ -277,6 +280,70 @@ def ble_tx(dut: DutClient, bt: BTClient, a) -> Dict:
 
 
 # --------------------------------------------------------------------------- #
+# External source: the analyzer measures a signal you generate by hand (e.g. an
+# 802.11ax waveform from the RFmx soft front panel). No DUT involved.
+# --------------------------------------------------------------------------- #
+def wifi_external(wlan: WifiClient, a, prompt: Callable[[str], str] = input) -> Dict:
+    freq = a.frequency_hz
+    log.info("Wi-Fi external: %.3f GHz, standard %s, bw %s, ref %.1f dBm",
+             freq / 1e9, a.wlan_standard, a.wlan_bw, a.ref_level)
+
+    wlan.config_signal(**_drop_none(dict(
+        center_frequency_hz=freq,
+        standard=a.wlan_standard,
+        channel_bw=a.wlan_bw,
+        
+        frequency_band=a.wlan_band)))
+    if a.trigger_source:
+        wlan.config_trigger(**_drop_none(dict(
+            trigger_source=a.trigger_source,
+            trigger_edge="RISING",
+            trigger_threshold=a.trigger_threshold,
+            trigger_delay_sec=a.trigger_delay_s,
+            trigger_min_quiet_duration_sec=a.trigger_quiet_s)))
+    wlan.config_power(reference_level_d_bm=a.ref_level,
+                      txp_measurement_enabled=True,
+                      txp_burst_detection_enabled=True)
+    wlan.config_modacc_dsss(dsss_mod_acc_measurement_enabled=False)
+    wlan.config_modacc_ofdm(ofdm_mod_acc_measurement_enabled=True,
+                            ofdm_mod_acc_burst_start_detection_enabled=True)
+    wlan.config_sem(sem_measurement_enabled=a.sem)
+
+    base = {"test": "wifi_external", "freq_hz": freq, "standard": a.wlan_standard,
+            "bandwidth": a.wlan_bw, "ref_level_dbm": a.ref_level}
+    answer = prompt(f"\n>>> Analyzer ready: {a.wlan_standard or 'service default'} "
+                    f"{a.wlan_bw or ''} at {freq / 1e9:.3f} GHz on switch port {a.tx_port}.\n"
+                    f">>> Start the waveform on the generator, then press Enter "
+                    f"to measure (or type 's' + Enter to skip): ")
+    if answer.strip().lower().startswith("s"):
+        log.info("Skipped by user")
+        return {**base, "skipped": True, "summary": {}}
+
+    wlan.initiate(a.result_space)
+    wait_measurement(wlan, a.meas_timeout_s)
+    result = {
+        "txp": wlan.fetch_txp(a.result_index),
+        "modacc": wlan.fetch_modacc_ofdm(a.result_index),
+    }
+    if a.sem:
+        result["sem"] = wlan.fetch_sem(a.result_index)
+
+    t, m = result["txp"], result["modacc"]
+    summary = {
+        "burst_power_dbm": t.get("power_avg_mean"),
+        "peak_power_dbm": t.get("power_max"),
+        "rms_evm": m.get("rms_evm_composite_mean"),
+        "freq_error_hz": m.get("ferror_mean"),
+        "detected_mcs": m.get("msc_index"),
+        "data_symbols": m.get("symbol_number"),
+        "psdu_crc": m.get("psdu_crc_status"),
+    }
+    if a.sem:
+        summary["sem_status"] = result["sem"].get("status")
+    return {**base, "summary": summary, "detail": result}
+
+
+# --------------------------------------------------------------------------- #
 # RX flows: RFSG transmits, DUT counts packets
 # --------------------------------------------------------------------------- #
 @dataclass
@@ -413,8 +480,8 @@ def _add_rx_common(p, default_waveform: str, default_limit: float):
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--ip", required=True, help="UWT service IP address")
-    ap.add_argument("--dut-service", required=True,
-                    help="DUT control gRPC service, host:port")
+    ap.add_argument("--dut-service", default=None,
+                    help="DUT control gRPC service, host:port (DUT tests only)")
     ap.add_argument("--dut-port", default="",
                     help="DUT serial port on the service host (e.g. COM5); "
                          "empty uses the service's configured default")
@@ -468,6 +535,19 @@ def build_parser() -> argparse.ArgumentParser:
     wr.add_argument("--rate", default="G_6M", choices=WifiRate.__members__)
     _add_rx_common(wr, "Wifi_6M", 0.10)
 
+    ex = sub.add_parser("wifi-external",
+                        help="measure a signal from an external generator (no DUT); "
+                             "prompts before measuring")
+    ex.add_argument("--frequency-hz", type=float, default=5.21e9,
+                    help="center frequency; must match the generator")
+    ex.add_argument("--wlan-standard", default="AX")
+    ex.add_argument("--wlan-bw", default="BW80")
+    ex.add_argument("--wlan-band", default=None,
+                    help="value for :CONFigure:WLAN:FREQuency:BAND (e.g. the 5 GHz band)")
+    ex.add_argument("--sem", action="store_true", help="also run SEM")
+    _add_tx_common(ex)
+    ex.set_defaults(ref_level=-10.0)
+
     br = sub.add_parser("ble-rx")
     br.add_argument("--channel", type=int, default=21,
                    help="BLE RF channel 0-39 (f = 2402 + 2*ch MHz)")
@@ -481,6 +561,12 @@ def run(a) -> List[Dict]:
     rx_port = a.rx_port if a.rx_port is not None else a.tx_port
     kw = dict(ip_addr=a.ip, timeout=a.visa_timeout_ms)
     results = []
+    if a.test == "wifi-external":
+        with session(WifiClient(rf_port=a.tx_port, **kw)) as wlan:
+            results.append(wifi_external(wlan, a))
+        return results
+    if not a.dut_service:
+        raise SystemExit("--dut-service is required for DUT tests")
     with DutClient(a.dut_service, com_port=a.dut_port) as dut:
         if a.test == "wifi-tx":
             with session(WifiClient(rf_port=a.tx_port, **kw)) as wlan:
@@ -513,6 +599,8 @@ def print_summary(r: Dict) -> None:
         s = r["sensitivity_dbm"]
         print(f"Sensitivity (PER <= {r['per_limit']*100:.1f}%): "
               f"{'not reached' if s is None else f'{s:.1f} dBm at DUT'}")
+    elif r.get("skipped"):
+        print("  skipped")
     else:
         for k, v in r["summary"].items():
             print(f"  {k}: {v}")

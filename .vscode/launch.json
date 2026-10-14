@@ -7,7 +7,9 @@
       "request": "launch",
       "program": "${workspaceFolder}/src/demo_sweep.py",
       "cwd": "${workspaceFolder}",
-      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
       "console": "integratedTerminal",
       "justMyCode": true
     },
@@ -17,16 +19,29 @@
       "request": "launch",
       "program": "${workspaceFolder}/src/demo.py",
       "cwd": "${workspaceFolder}",
-      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
       "console": "integratedTerminal",
       "args": [
-        "--ip", "192.168.141.60",
-        "--dut-service", "192.168.141.60:50051",
-        "--dut-port", "COM8",
-        "--tx-port", "1",
+        "--ip",
+        "192.168.141.60",
+        "--dut-service",
+        "192.168.141.60:50051",
+        "--dut-port",
+        "COM8",
+        "--tx-port",
+        "1",
         "-v",
-        "wifi-tx", "--channel", "6", "--rate", "G_6M",
-        "--wlan-standard", "A_G", "--wlan-bw", "BW20"
+        "wifi-tx",
+        "--channel",
+        "6",
+        "--rate",
+        "G_6M",
+        "--wlan-standard",
+        "A_G",
+        "--wlan-bw",
+        "BW20"
       ]
     },
     {
@@ -35,15 +50,53 @@
       "request": "launch",
       "program": "${workspaceFolder}/src/demo.py",
       "cwd": "${workspaceFolder}",
-      "env": { "PYTHONPATH": "${workspaceFolder}/src" },
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
       "console": "integratedTerminal",
       "args": [
-        "--ip", "192.168.141.60",
-        "--dut-service", "192.168.141.60:50051",
-        "--dut-port", "COM8",
-        "--tx-port", "1",
+        "--ip",
+        "192.168.141.60",
+        "--dut-service",
+        "192.168.141.60:50051",
+        "--dut-port",
+        "COM8",
+        "--tx-port",
+        "1",
         "-v",
-        "ble-tx", "--channel", "21", "--power-level", "15"
+        "ble-tx",
+        "--channel",
+        "21",
+        "--power-level",
+        "15"
+      ]
+    },
+    {
+      "name": "Demo CLI: wifi-external AX 80M",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/demo.py",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "console": "integratedTerminal",
+      "args": [
+        "--ip",
+        "192.168.141.60",
+        "--tx-port",
+        "2",
+        "-v",
+        "wifi-external",
+        "--frequency-hz",
+        "5.21e9",
+        "--wlan-standard",
+        "AX",
+        "--wlan-bw",
+        "BW80",
+        "--ref-level",
+        "-10",
+        "--sem"
       ]
     }
   ]
