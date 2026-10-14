@@ -32,6 +32,7 @@ DUT_SERVICE = "192.168.141.60:50051"
 DUT_PORT = "COM8"           # "" = the service's DefaultPort
 TX_PORT = 1                 # switch port for analyzer measurements
 RX_PORT = 1                 # switch port for the RFSG
+WIFI_EXTERNAL_PORT = 2
 OUT_DIR = "results"
 
 STOP_ON_ERROR = False       # True: stop at the first failing case (handy when debugging)
@@ -68,7 +69,7 @@ BLE_TX_CASES: List[Dict] = [
 # External source: the analyzer is configured, the sweep pauses for you to start
 # the waveform on the generator (e.g. RFmx SFP), and measures when you press
 # Enter ('s' + Enter skips). No DUT. frequency_hz must match the generator.
-RUN_WIFI_EXTERNAL = False
+RUN_WIFI_EXTERNAL = True
 
 WIFI_EXTERNAL_CASES: List[Dict] = [
     dict(name="Wi-Fi 6 80M ext", frequency_hz=5.21e9, wlan_standard="AX",
@@ -250,7 +251,7 @@ def main() -> None:
 
     # External-source cases don't use the DUT.
     if external_cases:
-        with demo.session(WifiClient(rf_port=TX_PORT, **kw)) as wlan:
+        with demo.session(WifiClient(rf_port=WIFI_EXTERNAL_PORT, **kw)) as wlan:
             for name, a in external_cases:
                 results.append(run_case("wifi-external", name, a,
                                         lambda a: demo.wifi_external(wlan, a)))

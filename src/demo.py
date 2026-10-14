@@ -311,13 +311,13 @@ def wifi_external(wlan: WifiClient, a, prompt: Callable[[str], str] = input) -> 
 
     base = {"test": "wifi_external", "freq_hz": freq, "standard": a.wlan_standard,
             "bandwidth": a.wlan_bw, "ref_level_dbm": a.ref_level}
-    answer = prompt(f"\n>>> Analyzer ready: {a.wlan_standard or 'service default'} "
-                    f"{a.wlan_bw or ''} at {freq / 1e9:.3f} GHz on switch port {a.tx_port}.\n"
-                    f">>> Start the waveform on the generator, then press Enter "
-                    f"to measure (or type 's' + Enter to skip): ")
-    if answer.strip().lower().startswith("s"):
-        log.info("Skipped by user")
-        return {**base, "skipped": True, "summary": {}}
+    #answer = prompt(f"\n>>> Analyzer ready: {a.wlan_standard or 'service default'} "
+    #               f"{a.wlan_bw or ''} at {freq / 1e9:.3f} GHz on switch port {a.tx_port}.\n"
+    #                f">>> Start the waveform on the generator, then press Enter "
+    #                f"to measure (or type 's' + Enter to skip): ")
+    #if answer.strip().lower().startswith("s"):
+    #    log.info("Skipped by user")
+    #    return {**base, "skipped": True, "summary": {}}
 
     wlan.initiate(a.result_space)
     wait_measurement(wlan, a.meas_timeout_s)
