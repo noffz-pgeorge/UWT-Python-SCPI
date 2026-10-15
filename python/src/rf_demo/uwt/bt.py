@@ -1,4 +1,4 @@
-from uwt_visa_instrument import UwtVisaInstrument
+from rf_demo.uwt.instrument import UwtVisaInstrument
 from typing import List, Dict, Union, Tuple, Optional
 
 class BTClient(UwtVisaInstrument):

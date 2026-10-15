@@ -1,17 +1,4 @@
 """Python client for the DUT control gRPC service.
-
-    from dut_grpc import DutClient, WifiRate, BleRate
-
-    with DutClient("instrument-pc:50051", com_port="COM5") as dut:
-        dut.wifi_tx(6, WifiRate.G_6M)
-        ...
-        dut.stop()
-
-        dut.wifi_rx_start(6, WifiRate.G_6M)
-        ...                                   # play packets with the RFSG
-        res = dut.wifi_rx_stop()
-        print(res.desired, res.per(1000), res.rssi_dbm)
-
 Method names and signatures match the earlier serial driver, so code
 written against that keeps working.
 """
@@ -24,8 +11,8 @@ from typing import Optional
 import grpc
 from google.protobuf.empty_pb2 import Empty
 
-from dut_grpc import dut_control_pb2 as pb
-from dut_grpc import dut_control_pb2_grpc as pb_grpc
+from rf_demo.dut._generated import dut_control_pb2 as pb
+from rf_demo.dut._generated import dut_control_pb2_grpc as pb_grpc
 
 DEFAULT_SYNCW = 0x71764129
 

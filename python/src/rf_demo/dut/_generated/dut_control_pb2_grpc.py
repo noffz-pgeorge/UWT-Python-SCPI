@@ -3,8 +3,8 @@
 import grpc
 import warnings
 
-from dut_grpc import dut_control_pb2 as dut__grpc_dot_dut__control__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+from rf_demo.dut._generated import dut_control_pb2 as rf__demo_dot_dut_dot___generated_dot_dut__control__pb2
 
 GRPC_GENERATED_VERSION = '1.84.0'
 GRPC_VERSION = grpc.__version__
@@ -19,7 +19,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in dut_grpc/dut_control_pb2_grpc.py depends on'
+        + ' but the generated code in rf_demo/dut/_generated/dut_control_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -37,53 +37,53 @@ class DutControlStub:
         """
         self.OpenSession = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/OpenSession',
-                request_serializer=dut__grpc_dot_dut__control__pb2.OpenSessionRequest.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.SessionStatus.FromString,
+                request_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.OpenSessionRequest.SerializeToString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.FromString,
                 _registered_method=True)
         self.CloseSession = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/CloseSession',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.SessionStatus.FromString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.FromString,
                 _registered_method=True)
         self.GetStatus = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/GetStatus',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.SessionStatus.FromString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.FromString,
                 _registered_method=True)
         self.Stop = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/Stop',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
                 _registered_method=True)
         self.StartBleTx = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/StartBleTx',
-                request_serializer=dut__grpc_dot_dut__control__pb2.BleTxRequest.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+                request_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleTxRequest.SerializeToString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
                 _registered_method=True)
         self.StartWlanTx = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/StartWlanTx',
-                request_serializer=dut__grpc_dot_dut__control__pb2.WlanTxRequest.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+                request_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanTxRequest.SerializeToString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
                 _registered_method=True)
         self.StartBleRx = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/StartBleRx',
-                request_serializer=dut__grpc_dot_dut__control__pb2.BleRxRequest.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+                request_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleRxRequest.SerializeToString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
                 _registered_method=True)
         self.FetchBleRx = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/FetchBleRx',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.BleRxResult.FromString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleRxResult.FromString,
                 _registered_method=True)
         self.StartWlanRx = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/StartWlanRx',
-                request_serializer=dut__grpc_dot_dut__control__pb2.WlanRxRequest.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+                request_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanRxRequest.SerializeToString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
                 _registered_method=True)
         self.FetchWlanRx = channel.unary_unary(
                 '/noffz.dut.v1.DutControl/FetchWlanRx',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=dut__grpc_dot_dut__control__pb2.WlanRxResult.FromString,
+                response_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanRxResult.FromString,
                 _registered_method=True)
 
 
@@ -161,53 +161,53 @@ def add_DutControlServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'OpenSession': grpc.unary_unary_rpc_method_handler(
                     servicer.OpenSession,
-                    request_deserializer=dut__grpc_dot_dut__control__pb2.OpenSessionRequest.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.SessionStatus.SerializeToString,
+                    request_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.OpenSessionRequest.FromString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.SerializeToString,
             ),
             'CloseSession': grpc.unary_unary_rpc_method_handler(
                     servicer.CloseSession,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.SessionStatus.SerializeToString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.SerializeToString,
             ),
             'GetStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.GetStatus,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.SessionStatus.SerializeToString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.SerializeToString,
             ),
             'Stop': grpc.unary_unary_rpc_method_handler(
                     servicer.Stop,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.CommandReply.SerializeToString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.SerializeToString,
             ),
             'StartBleTx': grpc.unary_unary_rpc_method_handler(
                     servicer.StartBleTx,
-                    request_deserializer=dut__grpc_dot_dut__control__pb2.BleTxRequest.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.CommandReply.SerializeToString,
+                    request_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleTxRequest.FromString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.SerializeToString,
             ),
             'StartWlanTx': grpc.unary_unary_rpc_method_handler(
                     servicer.StartWlanTx,
-                    request_deserializer=dut__grpc_dot_dut__control__pb2.WlanTxRequest.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.CommandReply.SerializeToString,
+                    request_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanTxRequest.FromString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.SerializeToString,
             ),
             'StartBleRx': grpc.unary_unary_rpc_method_handler(
                     servicer.StartBleRx,
-                    request_deserializer=dut__grpc_dot_dut__control__pb2.BleRxRequest.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.CommandReply.SerializeToString,
+                    request_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleRxRequest.FromString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.SerializeToString,
             ),
             'FetchBleRx': grpc.unary_unary_rpc_method_handler(
                     servicer.FetchBleRx,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.BleRxResult.SerializeToString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleRxResult.SerializeToString,
             ),
             'StartWlanRx': grpc.unary_unary_rpc_method_handler(
                     servicer.StartWlanRx,
-                    request_deserializer=dut__grpc_dot_dut__control__pb2.WlanRxRequest.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.CommandReply.SerializeToString,
+                    request_deserializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanRxRequest.FromString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.SerializeToString,
             ),
             'FetchWlanRx': grpc.unary_unary_rpc_method_handler(
                     servicer.FetchWlanRx,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=dut__grpc_dot_dut__control__pb2.WlanRxResult.SerializeToString,
+                    response_serializer=rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanRxResult.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -235,8 +235,8 @@ class DutControl:
             request,
             target,
             '/noffz.dut.v1.DutControl/OpenSession',
-            dut__grpc_dot_dut__control__pb2.OpenSessionRequest.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.SessionStatus.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.OpenSessionRequest.SerializeToString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.FromString,
             options,
             channel_credentials,
             insecure,
@@ -263,7 +263,7 @@ class DutControl:
             target,
             '/noffz.dut.v1.DutControl/CloseSession',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.SessionStatus.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.FromString,
             options,
             channel_credentials,
             insecure,
@@ -290,7 +290,7 @@ class DutControl:
             target,
             '/noffz.dut.v1.DutControl/GetStatus',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.SessionStatus.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.SessionStatus.FromString,
             options,
             channel_credentials,
             insecure,
@@ -317,7 +317,7 @@ class DutControl:
             target,
             '/noffz.dut.v1.DutControl/Stop',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
             options,
             channel_credentials,
             insecure,
@@ -343,8 +343,8 @@ class DutControl:
             request,
             target,
             '/noffz.dut.v1.DutControl/StartBleTx',
-            dut__grpc_dot_dut__control__pb2.BleTxRequest.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleTxRequest.SerializeToString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
             options,
             channel_credentials,
             insecure,
@@ -370,8 +370,8 @@ class DutControl:
             request,
             target,
             '/noffz.dut.v1.DutControl/StartWlanTx',
-            dut__grpc_dot_dut__control__pb2.WlanTxRequest.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanTxRequest.SerializeToString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
             options,
             channel_credentials,
             insecure,
@@ -397,8 +397,8 @@ class DutControl:
             request,
             target,
             '/noffz.dut.v1.DutControl/StartBleRx',
-            dut__grpc_dot_dut__control__pb2.BleRxRequest.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleRxRequest.SerializeToString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
             options,
             channel_credentials,
             insecure,
@@ -425,7 +425,7 @@ class DutControl:
             target,
             '/noffz.dut.v1.DutControl/FetchBleRx',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.BleRxResult.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.BleRxResult.FromString,
             options,
             channel_credentials,
             insecure,
@@ -451,8 +451,8 @@ class DutControl:
             request,
             target,
             '/noffz.dut.v1.DutControl/StartWlanRx',
-            dut__grpc_dot_dut__control__pb2.WlanRxRequest.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.CommandReply.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanRxRequest.SerializeToString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.CommandReply.FromString,
             options,
             channel_credentials,
             insecure,
@@ -479,7 +479,7 @@ class DutControl:
             target,
             '/noffz.dut.v1.DutControl/FetchWlanRx',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            dut__grpc_dot_dut__control__pb2.WlanRxResult.FromString,
+            rf__demo_dot_dut_dot___generated_dot_dut__control__pb2.WlanRxResult.FromString,
             options,
             channel_credentials,
             insecure,

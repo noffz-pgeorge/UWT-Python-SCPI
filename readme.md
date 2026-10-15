@@ -4,7 +4,7 @@ Python clients for the NOFFZ UWT RF test service (SCPI over VXI-11), plus a gRPC
 service for controlling an ESP32-C3 DUT, and an end-to-end RF demo that uses both.
 
 ```
-Linux / dev container (src/demo.py)
+Linux / dev container (python/demos/demo.py)
    ├── gRPC :50051 ──────► Windows PC: Noffz.Dut.Grpc.Service ── COM ──► ESP32-C3 (RF chamber)
    └── VXI-11 SCPI ──────► UWT / WPF service ──► NI VST + 32-port switch
 ```
@@ -26,17 +26,38 @@ dotnet/                            DUT control service and .NET client (Windows,
   Noffz.Dut.Grpc.Service/                gRPC service (console app or Windows Service)
   Noffz.Dut.Grpc.Client/                 .NET client library (DutClient)
   Noffz.Dut.Grpc.Client.Sample/          smoke test console app
-scripts/generate_stubs.sh          regenerates the Python gRPC stubs from proto/
-src/                               Python (on PYTHONPATH)
-  uwt_visa_instrument.py           VXI-11 base class; rf_port selects the switch port (inst<N>)
-  bt_client.py  wifi_client.py  rfsg_client.py   UWT SCPI clients
-  dut_grpc/                        Python client for the DUT service + generated stubs
-  demo.py                          RF demo CLI
+python/                            Python side (installable package: rf_demo)
+  pyproject.toml                   package metadata and dependencies
+  src/rf_demo/
+    uwt/                           UWT SCPI clients
+      instrument.py                VXI-11 base class; rf_port selects the switch port (inst<N>)
+      wifi.py  bt.py  rfsg.py      Wi-Fi, BLE and RFSG clients
+    dut/                           Python client for the DUT service
+      client.py
+      _generated/                  protoc output; do not edit (see tools/generate_stubs.sh)
+  demos/
+    demo.py                        RF demo CLI
+    demo_sweep.py                  runs a predefined set of demo cases
+  tools/generate_stubs.sh          regenerates the Python gRPC stubs from proto/
+results/                           demo output (JSON), not tracked
 ```
 
 ---
 
 ## Development Guide
+
+### Python setup
+
+The Python code is an installable package. From the repo root:
+
+```bash
+pip install -e "python/[dev]"
+```
+
+`-e` (editable) points Python at the source folder, so `import rf_demo` works from any
+directory and code changes take effect without reinstalling. The `[dev]` extra adds
+`grpcio-tools`, which is only needed to regenerate the gRPC stubs. Dependencies are listed
+in `python/pyproject.toml`.
 
 ### Optional: Development Containers (Docker + VS Code)
 
@@ -45,7 +66,7 @@ development reproducible and isolated, without installing specific Python versio
 dependencies on the host.
 
 > **Important:** The Dev Container is optional. A locally installed Python environment
-> works too; run `pip install -r requirements.txt` and add `src/` to `PYTHONPATH`.
+> works too; run the install command from [Python setup](#python-setup).
 
 #### What is a Dev Container?
 
@@ -61,8 +82,9 @@ This avoids problems like:
 - Conflicting Python versions
 - Dependency drift between developers or customers
 
-`requirements.txt` is installed when the image is built. After changing it, run
-**Dev Containers: Rebuild Container** so the new packages are installed.
+The package is installed (`pip install -e "python/[dev]"`) when the container is created.
+After changing dependencies in `python/pyproject.toml`, rerun that command or run
+**Dev Containers: Rebuild Container**.
 
 The Dev Container is Python-only. The .NET service is built and run on Windows (see
 [DUT control service](#dut-control-service-windows)).
@@ -186,7 +208,7 @@ original `ESP32C3Control` DLL won't work with it.
 ### DUT control client
 
 ```python
-from dut_grpc import DutClient, WifiRate
+from rf_demo.dut import DutClient, WifiRate
 
 with DutClient("<service-pc>:50051", com_port="COM8") as dut:
     dut.wifi_tx(6, WifiRate.G_6M)          # transmit until stop()
@@ -201,16 +223,23 @@ with DutClient("<service-pc>:50051", com_port="COM8") as dut:
 session. Connectivity check:
 
 ```bash
-python -c "from dut_grpc import DutClient; print(DutClient('<service-pc>:50051', com_port=None).open().status())"
+python -c "from rf_demo.dut import DutClient; print(DutClient('<service-pc>:50051', com_port=None).open().status())"
+```
+
+### UWT SCPI clients
+
+```python
+from rf_demo.uwt import BTClient, RfsgClient, WifiClient
 ```
 
 ### Regenerating the gRPC stubs
 
-The stubs in `src/dut_grpc/` are checked in and need `grpcio>=1.84` and `protobuf>=7.35`.
-After changing `proto/dut_control.proto`, or to match older package versions, run:
+The stubs in `python/src/rf_demo/dut/_generated/` are checked in and need `grpcio>=1.84`
+and `protobuf>=7.35`. After changing `proto/dut_control.proto`, or to match older package
+versions, run (requires the `[dev]` extra):
 
 ```bash
-bash scripts/generate_stubs.sh
+python/tools/generate_stubs.sh
 ```
 
 The .NET projects generate their code from the same proto at build time.
@@ -219,10 +248,16 @@ The .NET projects generate their code from the same proto at build time.
 
 ## RF demo
 
+Run from the repo root (results are written to `results/` relative to the working
+directory):
+
 ```bash
-python src/demo.py --ip <uwt-ip> --dut-service <service-pc>:50051 --dut-port COM8 --tx-port 1 -v <test> [options]
-python src/demo.py <test> --help        # all options for a test
+python python/demos/demo.py --ip <uwt-ip> --dut-service <service-pc>:50051 --dut-port COM8 --tx-port 1 -v <test> [options]
+python python/demos/demo.py <test> --help        # all options for a test
 ```
+
+In VS Code, the configurations in `.vscode/launch.json` run the same commands under the
+debugger.
 
 | Test | What happens |
 |---|---|
@@ -238,28 +273,28 @@ Results are printed and saved as JSON in `results/`.
 
 ```bash
 # Wi-Fi TX, channel 6, 802.11g 6 Mbps
-python src/demo.py --ip 192.168.141.60 --dut-service 192.168.141.60:50051 --dut-port COM8 --tx-port 1 -v \
+python python/demos/demo.py --ip 192.168.141.60 --dut-service 192.168.141.60:50051 --dut-port COM8 --tx-port 1 -v \
     wifi-tx --channel 6 --rate G_6M --wlan-standard A_G --wlan-bw BW20
 
 # BLE TX, RF channel 21 (2402 + 2*21 = 2444 MHz)
-python src/demo.py ... ble-tx --channel 21
+python python/demos/demo.py ... ble-tx --channel 21
 
 # Wi-Fi RX sweep: start coarse to confirm the DUT counts packets, then go finer
-python src/demo.py ... wifi-rx --waveform <name> --packets-per-waveform <n> --start -50 --stop -90 --step -5
+python python/demos/demo.py ... wifi-rx --waveform <name> --packets-per-waveform <n> --start -50 --stop -90 --step -5
 ```
 
 ### External source (802.11ax)
 
 ```bash
-python src/demo.py --ip 192.168.141.60 --tx-port 1 -v wifi-external \
+python python/demos/demo.py --ip 192.168.141.60 --tx-port 1 -v wifi-external \
     --frequency-hz 5.21e9 --wlan-standard AX --wlan-bw BW80 --ref-level -10 --sem
 ```
 
 The demo configures the analyzer, then prompts. Start the waveform in the generator
 (same center frequency), press Enter to measure, or type `s` to skip. In
-`demo_sweep.py` these cases are in `WIFI_EXTERNAL_CASES` and run after the DUT cases.
-`--dut-service` isn't needed for this test. The waveform needs idle time between
-packets for the RF0 trigger; for a continuous waveform pass `--trigger-source ""`.
+`python/demos/demo_sweep.py` these cases are in `WIFI_EXTERNAL_CASES` and run after the
+DUT cases. `--dut-service` isn't needed for this test. The waveform needs idle time
+between packets for the RF0 trigger; for a continuous waveform pass `--trigger-source ""`.
 
 ### Measurement settings that matter
 
@@ -292,6 +327,7 @@ packets for the RF0 trigger; for a continuous waveform pass `--trigger-source ""
 
 | Symptom | Likely cause |
 |---|---|
+| `ModuleNotFoundError: No module named 'rf_demo'` | Package not installed in this environment; run `pip install -e "python/[dev]"` from the repo root |
 | `VI_ERROR_RSRC_NFOUND`, "can't connect to server" on port 111 | The UWT service isn't configured for SCPI/VXI-11, or the firewall blocks port 111 and the VXI-11 core port |
 | `DUT service not reachable` | DUT service not running, wrong IP, or port 50051 blocked by the firewall |
 | `TimeoutError ... last state` | Trigger never fired (check `--trigger-threshold`) or wrong `--result-space` |
