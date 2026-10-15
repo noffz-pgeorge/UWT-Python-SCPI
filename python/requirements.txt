@@ -1,6 +1,0 @@
-pyvisa
-pyvisa-py
-zeroconf
-grpcio>=1.84
-protobuf>=7.35
-grpcio-tools>=1.84   # only for regenerating stubs; harmless to keep in a dev image

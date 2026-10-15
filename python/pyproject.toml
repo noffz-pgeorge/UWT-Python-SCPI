@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rf-demo"
+version = "0.1.0"
+description = "Noffz UWT RF demo: SCPI instrument clients and ESP32-C3 DUT gRPC client"
+requires-python = ">=3.11"
+dependencies = [
+    "pyvisa",
+    "pyvisa-py",
+    "zeroconf",
+    "grpcio>=1.84",
+    "protobuf>=7.35",
+]
+
+[project.optional-dependencies]
+dev = ["grpcio-tools>=1.84"]   # only needed to regenerate stubs
+
+[tool.setuptools.packages.find]
+where = ["src"]
