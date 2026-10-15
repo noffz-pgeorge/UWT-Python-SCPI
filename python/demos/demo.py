@@ -33,11 +33,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional
 
-from bt_client import BTClient
-from dut_grpc import (BLE_POWER_LEVEL_DBM, BlePayload, BleRate, DutClient, WifiRate,
+from rf_demo.uwt import BTClient, RfsgClient, WifiClient
+from rf_demo.dut import (BLE_POWER_LEVEL_DBM, BlePayload, BleRate, DutClient, WifiRate,
                       ble_channel_freq_hz, wifi_channel_freq_hz)
-from rfsg_client import RfsgClient
-from wifi_client import WifiClient
 
 log = logging.getLogger("demo")
 

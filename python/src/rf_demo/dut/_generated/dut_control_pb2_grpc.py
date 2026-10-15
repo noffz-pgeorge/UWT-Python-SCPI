@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from dut_grpc import dut_control_pb2 as dut__grpc_dot_dut__control__pb2
+from rf_demo.dut._generated import dut_control_pb2 as dut__grpc_dot_dut__control__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 GRPC_GENERATED_VERSION = '1.84.0'

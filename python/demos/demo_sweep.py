@@ -19,10 +19,8 @@ from pathlib import Path
 from typing import Callable, Dict, List
 
 import demo
-from bt_client import BTClient
-from dut_grpc import DutClient
-from rfsg_client import RfsgClient
-from wifi_client import WifiClient
+from rf_demo.uwt import BTClient, RfsgClient, WifiClient
+from rf_demo.dut import DutClient
 
 # --------------------------------------------------------------------------- #
 # Station
