@@ -70,7 +70,7 @@ BLE_TX_CASES: List[Dict] = [
 RUN_WIFI_EXTERNAL = True
 
 WIFI_EXTERNAL_CASES: List[Dict] = [
-    dict(name="Wi-Fi 6 80M ext", frequency_hz=5.21e9, wlan_standard="AX",
+    dict(name="Wi-Fi 6 80M ext", frequency_hz=7.015e9, wlan_standard="AX",
          wlan_bw="BW80", ref_level=-10.0, sem=True),
 ]
 

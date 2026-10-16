@@ -60,7 +60,7 @@
         "--tx-port", "2",
         "-v",
         "wifi-external",
-        "--frequency-hz", "5.21e9",
+        "--frequency-hz", "7.015e9",
         "--wlan-standard", "AX",
         "--wlan-bw", "BW80",
         "--ref-level", "-10",
