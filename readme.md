@@ -18,10 +18,10 @@ Linux / dev container (python/demos/demo.py)
 ## Repository layout
 
 ```
-.devcontainer/                     optional Python dev container
+.devcontainer/                     optional dev container (Python, plus the .NET SDK for building)
 docs/                              NOFFZ UWT SCPI Commands Reference
 proto/dut_control.proto            DUT control gRPC API (shared by .NET and Python)
-dotnet/                            DUT control service and .NET client (Windows, .NET 8)
+dotnet/                            DUT control service and .NET client (.NET 8; the service runs on Windows)
   Noffz.Dut.slnx
   Noffz.Espressif.ESP32C3.DutControls/   serial driver for the ESP32-C3 RF test firmware
   Noffz.Dut.Grpc.Service/                gRPC service (console app or Windows Service)
@@ -70,9 +70,9 @@ resolves. Code outside `python/demos/` should import the wrapper only.
 
 ### Optional: Development Containers (Docker + VS Code)
 
-This project includes an **optional Dev Container** configuration that makes Python
-development reproducible and isolated, without installing specific Python versions or
-dependencies on the host.
+This project includes an **optional Dev Container** configuration that makes Python and
+.NET development reproducible and isolated, without installing specific Python or .NET
+versions or dependencies on the host.
 
 > **Important:** The Dev Container is optional. A locally installed Python environment
 > works too; run the install command from [Python setup](#python-setup).
@@ -83,7 +83,8 @@ A Dev Container is a Docker-based development environment that VS Code attaches 
 VS Code runs your workspace **inside a container** that has:
 
 - A pinned Python version
-- All required dependencies
+- All required Python dependencies
+- The .NET 10 SDK and C# Dev Kit, for editing and building the .NET projects
 - A consistent Linux environment
 
 This avoids problems like:
@@ -95,8 +96,26 @@ The package is installed (`pip install -e "python/[demo,dev]"`) when the contain
 After changing dependencies in `python/pyproject.toml`, rerun that command or run
 **Dev Containers: Rebuild Container**.
 
-The Dev Container is Python-only. The .NET service is built and run on Windows (see
-[DUT control service](#dut-control-service-windows)).
+The first build takes several minutes because it installs the .NET SDK. Later rebuilds
+reuse the cached image unless the `.devcontainer/` files change.
+
+#### .NET in the Dev Container
+
+The container includes the .NET 10 SDK, so the solution builds inside it (the projects
+target .NET 8; any SDK from 9.0.200 on can build them and read the `.slnx` format):
+
+```bash
+dotnet build dotnet/Noffz.Dut.slnx
+```
+
+C# Dev Kit opens `dotnet/Noffz.Dut.slnx` automatically through the `dotnet.defaultSolution`
+setting in `devcontainer.json`. Its solution picker doesn't list `.slnx` files, so keep
+that setting if the solution file moves or is renamed.
+
+Building in the container is useful for checking that a change to
+`proto/dut_control.proto` compiles on the .NET side as well as the Python side. The DUT
+service itself still has to **run** on the Windows PC the DUT is connected to, since it
+owns the DUT's COM port (see [DUT control service](#dut-control-service-windows)).
 
 ### Dev Container setup when using WSL2 and instrument communication
 
@@ -147,7 +166,8 @@ the DUT is plugged into, which is usually the same PC as the UWT/WPF service.
 
 ### Build
 
-Requires the .NET 8 SDK or later.
+Requires the .NET 9 SDK (9.0.200) or later. The projects target .NET 8, but the `.slnx`
+solution format needs a newer SDK. The Dev Container already has a suitable SDK.
 
 ```powershell
 cd dotnet
@@ -347,7 +367,7 @@ between packets for the RF0 trigger; for a continuous waveform pass `--trigger-s
 | `ModuleNotFoundError: No module named 'noffz_uwt'` (or `'grpc'`) | Package not installed in this environment; run `pip install -e "python/[demo,dev]"` from the repo root. If an old `rf-demo` install exists, `pip uninstall rf-demo` first |
 | `ModuleNotFoundError: No module named 'dut'` | `dut` isn't installed; it only imports from scripts in `python/demos/` (or with `python/demos` as the working directory) |
 | `VI_ERROR_RSRC_NFOUND`, "can't connect to server" on port 111 | The UWT service isn't configured for SCPI/VXI-11, or the firewall blocks port 111 and the VXI-11 core port |
-| `DUT service not reachable` | DUT service not running, wrong IP, or port 50051 blocked by the firewall |
+| `DUT service not reachable` | DUT service not running, wrong IP, or port 50051 blocked by the firewall. If UWT starts before DUT service. Kill UWT service. Start DUT service, and then start UWT. |
 | `TimeoutError ... last state` | Trigger never fired (check `--trigger-threshold`) or wrong `--result-space` |
 | `RFSG still generating after 30s` | Waveform repeats continuously; set `--repetition-mode` to finite |
 | RX: 0 received at strong levels | Waveform rate or sync word doesn't match the DUT; check `raw` in the JSON |

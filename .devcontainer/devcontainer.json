@@ -4,10 +4,16 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
+     "features": {
+     "ghcr.io/devcontainers/features/dotnet:2": { "version": "10.0" }
+   },
   "remoteUser": "vscode",
   "postCreateCommand": "pip install -e \"python/[demo,dev]\"",
   "customizations": {
     "vscode": {
+      "settings": {
+        "dotnet.defaultSolution": "dotnet/Noffz.Dut.slnx"
+      },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
