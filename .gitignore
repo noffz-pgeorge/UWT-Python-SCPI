@@ -224,4 +224,5 @@ __marimo__/
 dotnet/**/bin/
 dotnet/**/obj/
 .vs/
+.vscode/settings.json
 
