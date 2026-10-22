@@ -11,8 +11,8 @@ from typing import Optional
 import grpc
 from google.protobuf.empty_pb2 import Empty
 
-from rf_demo.dut._generated import dut_control_pb2 as pb
-from rf_demo.dut._generated import dut_control_pb2_grpc as pb_grpc
+from dut._generated import dut_control_pb2 as pb
+from dut._generated import dut_control_pb2_grpc as pb_grpc
 
 DEFAULT_SYNCW = 0x71764129
 
