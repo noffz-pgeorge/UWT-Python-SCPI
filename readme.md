@@ -1,7 +1,8 @@
 # UWT Python SCPI
 
-Python clients for the NOFFZ UWT RF test service (SCPI over VXI-11), plus a gRPC
-service for controlling an ESP32-C3 DUT, and an end-to-end RF demo that uses both.
+`noffz_uwt`: a Python wrapper for the NOFFZ UWT RF test service's SCPI API (VXI-11).
+The repo also holds an end-to-end RF demo built on it: a gRPC service for controlling an
+ESP32-C3 DUT, and demo scripts that use both.
 
 ```
 Linux / dev container (python/demos/demo.py)
@@ -26,18 +27,18 @@ dotnet/                            DUT control service and .NET client (Windows,
   Noffz.Dut.Grpc.Service/                gRPC service (console app or Windows Service)
   Noffz.Dut.Grpc.Client/                 .NET client library (DutClient)
   Noffz.Dut.Grpc.Client.Sample/          smoke test console app
-python/                            Python side (installable package: rf_demo)
-  pyproject.toml                   package metadata and dependencies
-  src/rf_demo/
-    uwt/                           UWT SCPI clients
-      instrument.py                VXI-11 base class; rf_port selects the switch port (inst<N>)
-      wifi.py  bt.py  rfsg.py      Wi-Fi, BLE and RFSG clients
-    dut/                           Python client for the DUT service
-      client.py
-      _generated/                  protoc output; do not edit (see tools/generate_stubs.sh)
-  demos/
+python/
+  pyproject.toml                   package metadata and dependencies (installs noffz-uwt)
+  noffz_uwt/                       the wrapper: import noffz_uwt (installed package)
+    instrument.py                  VXI-11 base class; rf_port selects the switch port (inst<N>)
+    wifi.py  bt.py  rfsg.py        Wi-Fi, BLE and RFSG clients
+    lte.py  nr.py                  LTE and 5G NR clients
+  demos/                           demo scripts (not installed; run them as scripts)
     demo.py                        RF demo CLI
     demo_sweep.py                  runs a predefined set of demo cases
+    dut/                           Python client for the DUT service: import dut
+      client.py
+      _generated/                  protoc output; do not edit (see tools/generate_stubs.sh)
   tools/generate_stubs.sh          regenerates the Python gRPC stubs from proto/
 results/                           demo output (JSON), not tracked
 ```
@@ -48,16 +49,24 @@ results/                           demo output (JSON), not tracked
 
 ### Python setup
 
-The Python code is an installable package. From the repo root:
+The wrapper is an installable package (`noffz-uwt`, imported as `noffz_uwt`). From the repo root:
 
 ```bash
-pip install -e "python/[dev]"
+pip install -e python/                  # wrapper only
+pip install -e "python/[demo,dev]"      # wrapper + demo dependencies + stub tooling
 ```
 
-`-e` (editable) points Python at the source folder, so `import rf_demo` works from any
-directory and code changes take effect without reinstalling. The `[dev]` extra adds
-`grpcio-tools`, which is only needed to regenerate the gRPC stubs. Dependencies are listed
-in `python/pyproject.toml`.
+`-e` (editable) points Python at the source folder, so `import noffz_uwt` works from any
+directory and code changes take effect without reinstalling. The extras:
+
+- `[demo]` adds `grpcio` and `protobuf`, needed by the DUT client the demos use.
+- `[dev]` adds `grpcio-tools`, only needed to regenerate the gRPC stubs.
+
+Dependencies are listed in `python/pyproject.toml`.
+
+The demos and the DUT client (`python/demos/`) are not installed. When you run a demo
+script, Python puts the script's folder on the import path, which is how `import dut`
+resolves. Code outside `python/demos/` should import the wrapper only.
 
 ### Optional: Development Containers (Docker + VS Code)
 
@@ -82,7 +91,7 @@ This avoids problems like:
 - Conflicting Python versions
 - Dependency drift between developers or customers
 
-The package is installed (`pip install -e "python/[dev]"`) when the container is created.
+The package is installed (`pip install -e "python/[demo,dev]"`) when the container is created.
 After changing dependencies in `python/pyproject.toml`, rerun that command or run
 **Dev Containers: Rebuild Container**.
 
@@ -207,8 +216,11 @@ original `ESP32C3Control` DLL won't work with it.
 
 ### DUT control client
 
+The DUT client lives in `python/demos/dut/` and is imported as `dut` from scripts in
+`python/demos/`:
+
 ```python
-from rf_demo.dut import DutClient, WifiRate
+from dut import DutClient, WifiRate
 
 with DutClient("<service-pc>:50051", com_port="COM8") as dut:
     dut.wifi_tx(6, WifiRate.G_6M)          # transmit until stop()
@@ -223,20 +235,25 @@ with DutClient("<service-pc>:50051", com_port="COM8") as dut:
 session. Connectivity check:
 
 ```bash
-python -c "from rf_demo.dut import DutClient; print(DutClient('<service-pc>:50051', com_port=None).open().status())"
+cd python/demos
+python -c "from dut import DutClient; print(DutClient('<service-pc>:50051', com_port=None).open().status())"
 ```
 
 ### UWT SCPI clients
 
 ```python
-from rf_demo.uwt import BTClient, RfsgClient, WifiClient
+from noffz_uwt import BTClient, LteClient, NrClient, RfsgClient, WifiClient
 ```
+
+LTE and NR signals are configured per subblock / component carrier (and for NR, per
+bandwidth part, user and PDSCH/PUSCH). Those config and fetch methods take 1-based index
+arguments that default to 1, so a single-carrier setup can ignore them.
 
 ### Regenerating the gRPC stubs
 
-The stubs in `python/src/rf_demo/dut/_generated/` are checked in and need `grpcio>=1.84`
+The stubs in `python/demos/dut/_generated/` are checked in and need `grpcio>=1.84`
 and `protobuf>=7.35`. After changing `proto/dut_control.proto`, or to match older package
-versions, run (requires the `[dev]` extra):
+versions, run (requires the `[demo,dev]` extras):
 
 ```bash
 python/tools/generate_stubs.sh
@@ -327,7 +344,8 @@ between packets for the RF0 trigger; for a continuous waveform pass `--trigger-s
 
 | Symptom | Likely cause |
 |---|---|
-| `ModuleNotFoundError: No module named 'rf_demo'` | Package not installed in this environment; run `pip install -e "python/[dev]"` from the repo root |
+| `ModuleNotFoundError: No module named 'noffz_uwt'` (or `'grpc'`) | Package not installed in this environment; run `pip install -e "python/[demo,dev]"` from the repo root. If an old `rf-demo` install exists, `pip uninstall rf-demo` first |
+| `ModuleNotFoundError: No module named 'dut'` | `dut` isn't installed; it only imports from scripts in `python/demos/` (or with `python/demos` as the working directory) |
 | `VI_ERROR_RSRC_NFOUND`, "can't connect to server" on port 111 | The UWT service isn't configured for SCPI/VXI-11, or the firewall blocks port 111 and the VXI-11 core port |
 | `DUT service not reachable` | DUT service not running, wrong IP, or port 50051 blocked by the firewall |
 | `TimeoutError ... last state` | Trigger never fired (check `--trigger-threshold`) or wrong `--result-space` |

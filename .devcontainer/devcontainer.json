@@ -4,7 +4,7 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
-  "postCreateCommand": "pip install --root-user-action=ignore -e \"python/[dev]\"",
+  "postCreateCommand": "pip install --root-user-action=ignore -e \"python/[demo,dev]\"",
   "customizations": {
     "vscode": {
       "extensions": [

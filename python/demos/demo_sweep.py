@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import Callable, Dict, List
 
 import demo
-from rf_demo.uwt import BTClient, RfsgClient, WifiClient
-from rf_demo.dut import DutClient
+from noffz_uwt import BTClient, RfsgClient, WifiClient
+from dut import DutClient
 
 # --------------------------------------------------------------------------- #
 # Station
@@ -67,7 +67,7 @@ BLE_TX_CASES: List[Dict] = [
 # External source: the analyzer is configured, the sweep pauses for you to start
 # the waveform on the generator (e.g. RFmx SFP), and measures when you press
 # Enter ('s' + Enter skips). No DUT. frequency_hz must match the generator.
-RUN_WIFI_EXTERNAL = True
+RUN_WIFI_EXTERNAL = False
 
 WIFI_EXTERNAL_CASES: List[Dict] = [
     dict(name="Wi-Fi 6 80M ext", frequency_hz=7.015e9, wlan_standard="AX",
