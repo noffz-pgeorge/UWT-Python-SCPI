@@ -3,20 +3,20 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rf-demo"
+name = "noffz-uwt"
 version = "0.1.0"
-description = "Noffz UWT RF SCPI instrument clients plus ESP32-C3 DUT gRPC client and demo"
+description = "Python wrapper for the Noffz UWT SCPI API"
 requires-python = ">=3.11"
 dependencies = [
     "pyvisa",
     "pyvisa-py",
-    "zeroconf",
-    "grpcio>=1.84",
-    "protobuf>=7.35",
+    "zeroconf",   # optional pyvisa-py dependency for TCPIP resource discovery
 ]
 
 [project.optional-dependencies]
-dev = ["grpcio-tools>=1.84"]   # only needed to regenerate stubs
+demo = ["grpcio>=1.84", "protobuf>=7.35"]   # DUT gRPC client used by python/demos
+dev = ["grpcio-tools>=1.84"]                 # only needed to regenerate stubs
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]          # python/ itself is the package root (flat layout, no src/)
+include = ["uwt*"]     # ship only the wrapper; demos/ and tools/ are not installed
