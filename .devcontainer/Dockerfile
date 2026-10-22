@@ -1,6 +1,6 @@
 FROM python:3.14.7-slim
 
-RUN apt-get update && apt-get install -y git \
+RUN apt-get update && apt-get install -y git curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user for the dev container. Dev Containers changes its UID to match
