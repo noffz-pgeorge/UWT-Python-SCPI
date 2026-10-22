@@ -1,6 +1,6 @@
 # UWT Python SCPI
 
-`uwt`: a Python wrapper for the NOFFZ UWT RF test service's SCPI API (VXI-11).
+`noffz_uwt`: a Python wrapper for the NOFFZ UWT RF test service's SCPI API (VXI-11).
 The repo also holds an end-to-end RF demo built on it: a gRPC service for controlling an
 ESP32-C3 DUT, and demo scripts that use both.
 
@@ -29,7 +29,7 @@ dotnet/                            DUT control service and .NET client (Windows,
   Noffz.Dut.Grpc.Client.Sample/          smoke test console app
 python/
   pyproject.toml                   package metadata and dependencies (installs noffz-uwt)
-  uwt/                             the wrapper: import uwt (installed package)
+  noffz_uwt/                       the wrapper: import noffz_uwt (installed package)
     instrument.py                  VXI-11 base class; rf_port selects the switch port (inst<N>)
     wifi.py  bt.py  rfsg.py        Wi-Fi, BLE and RFSG clients
     lte.py  nr.py                  LTE and 5G NR clients
@@ -49,14 +49,14 @@ results/                           demo output (JSON), not tracked
 
 ### Python setup
 
-The wrapper is an installable package (`noffz-uwt`, imported as `uwt`). From the repo root:
+The wrapper is an installable package (`noffz-uwt`, imported as `noffz_uwt`). From the repo root:
 
 ```bash
 pip install -e python/                  # wrapper only
 pip install -e "python/[demo,dev]"      # wrapper + demo dependencies + stub tooling
 ```
 
-`-e` (editable) points Python at the source folder, so `import uwt` works from any
+`-e` (editable) points Python at the source folder, so `import noffz_uwt` works from any
 directory and code changes take effect without reinstalling. The extras:
 
 - `[demo]` adds `grpcio` and `protobuf`, needed by the DUT client the demos use.
@@ -242,7 +242,7 @@ python -c "from dut import DutClient; print(DutClient('<service-pc>:50051', com_
 ### UWT SCPI clients
 
 ```python
-from uwt import BTClient, LteClient, NrClient, RfsgClient, WifiClient
+from noffz_uwt import BTClient, LteClient, NrClient, RfsgClient, WifiClient
 ```
 
 LTE and NR signals are configured per subblock / component carrier (and for NR, per
@@ -344,7 +344,7 @@ between packets for the RF0 trigger; for a continuous waveform pass `--trigger-s
 
 | Symptom | Likely cause |
 |---|---|
-| `ModuleNotFoundError: No module named 'uwt'` (or `'grpc'`) | Package not installed in this environment; run `pip install -e "python/[demo,dev]"` from the repo root. If an old `rf-demo` install exists, `pip uninstall rf-demo` first |
+| `ModuleNotFoundError: No module named 'noffz_uwt'` (or `'grpc'`) | Package not installed in this environment; run `pip install -e "python/[demo,dev]"` from the repo root. If an old `rf-demo` install exists, `pip uninstall rf-demo` first |
 | `ModuleNotFoundError: No module named 'dut'` | `dut` isn't installed; it only imports from scripts in `python/demos/` (or with `python/demos` as the working directory) |
 | `VI_ERROR_RSRC_NFOUND`, "can't connect to server" on port 111 | The UWT service isn't configured for SCPI/VXI-11, or the firewall blocks port 111 and the VXI-11 core port |
 | `DUT service not reachable` | DUT service not running, wrong IP, or port 50051 blocked by the firewall |

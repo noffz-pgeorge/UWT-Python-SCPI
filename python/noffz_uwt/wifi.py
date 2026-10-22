@@ -1,4 +1,4 @@
-from uwt.instrument import UwtVisaInstrument
+from noffz_uwt.instrument import UwtVisaInstrument
 from typing import List, Dict, Union, Tuple, Optional
 
 class WifiClient(UwtVisaInstrument):

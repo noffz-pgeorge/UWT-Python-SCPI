@@ -33,7 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional
 
-from uwt import BTClient, RfsgClient, WifiClient
+from noffz_uwt import BTClient, RfsgClient, WifiClient
 from dut import (BLE_POWER_LEVEL_DBM, BlePayload, BleRate, DutClient, WifiRate,
                       ble_channel_freq_hz, wifi_channel_freq_hz)
 

@@ -19,4 +19,4 @@ dev = ["grpcio-tools>=1.84"]                 # only needed to regenerate stubs
 
 [tool.setuptools.packages.find]
 where = ["."]          # python/ itself is the package root (flat layout, no src/)
-include = ["uwt*"]     # ship only the wrapper; demos/ and tools/ are not installed
+include = ["noffz_uwt*"]     # ship only the wrapper; demos/ and tools/ are not installed
