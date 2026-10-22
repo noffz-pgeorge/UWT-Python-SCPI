@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Callable, Dict, List
 
 import demo
-from ..uwt import BTClient, RfsgClient, WifiClient
+from uwt import BTClient, RfsgClient, WifiClient
 from dut import DutClient
 
 # --------------------------------------------------------------------------- #
